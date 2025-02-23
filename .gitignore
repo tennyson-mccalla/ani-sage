@@ -24,13 +24,21 @@ wheels/
 venv/
 env/
 ENV/
+.env
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
 
 # Project specific
-.env
-config.local.yml
+.ani-sage-cache/
+.ani-sage-data/

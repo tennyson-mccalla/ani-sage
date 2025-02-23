@@ -1,0 +1,22 @@
+[project]
+name = "ani-sage"
+version = "0.1.0"
+description = "AI-powered anime recommendation system"
+requires-python = ">=3.8"
+license = "GPL-3.0"
+authors = [
+    {name = "TenDev", email = "tendev@example.com"}
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.dependencies]
+python = "^3.8"
+requests = "^2.31.0"
+pydantic = "^2.5.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
