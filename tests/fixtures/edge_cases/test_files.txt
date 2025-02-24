@@ -1,0 +1,8 @@
+[Group] Show with multiple 01 02 03 numbers [1080p].mkv
+[Group][SubGroup] Multiple groups show 01 [720p].mkv
+Show with no episode [1080p].mkv
+[Group] Show.with.dots.01 [1080p].mkv
+[Group] Show_with_underscores_01 [1080p].mkv
+[Group] Show with v2 release - 01v2 [1080p].mkv
+[Group] Show with multiple [720p][1080p] qualities 01.mkv
+2024-02-25 Show with date first [1080p].mkv
