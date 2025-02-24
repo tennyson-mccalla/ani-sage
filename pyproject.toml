@@ -1,22 +1,33 @@
 [project]
-name = "ani-sage"
+name = "ani-sage-metadata"
 version = "0.1.0"
-description = "AI-powered anime recommendation system"
-requires-python = ">=3.8"
-license = "GPL-3.0"
+description = "Metadata extraction core for ani-sage"
 authors = [
-    {name = "TenDev", email = "tendev@example.com"}
+    { name = "TenDev", email = "tendev@example.com" }
 ]
+dependencies = [
+    "pydantic>=2.0.0",
+    "tomli>=2.0.0",
+    "tomli-w>=1.0.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+]
+requires-python = ">=3.8"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+ani-sage = "src.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.dependencies]
-python = "^3.8"
-requests = "^2.31.0"
-pydantic = "^2.5.0"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
