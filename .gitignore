@@ -42,3 +42,8 @@ htmlcov/
 # Project specific
 .ani-sage-cache/
 .ani-sage-data/
+
+# Environment variables
+.env
+.env.*
+!.env.example
