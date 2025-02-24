@@ -1,3 +1,13 @@
+# Documentation (internal use)
+CHECKLIST.md
+LESSONS.md
+MIGRATION.md
+ONBOARDING.md
+project_context.md
+
+# Git worktrees
+worktrees/
+
 # Python
 __pycache__/
 *.py[cod]
