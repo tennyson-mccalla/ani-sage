@@ -7,6 +7,13 @@ project_context.md
 
 # Git worktrees
 worktrees/
+ani-sage-worktrees/*/venv/
+ani-sage-worktrees/*/.env
+ani-sage-worktrees/*/__pycache__/
+
+# Project specific
+.ani-sage-cache/
+.ani-sage-data/
 
 # Python
 __pycache__/
@@ -48,10 +55,6 @@ ENV/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
-
-# Project specific
-.ani-sage-cache/
-.ani-sage-data/
 
 # Environment variables
 .env
