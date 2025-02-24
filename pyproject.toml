@@ -1,22 +1,46 @@
-[project]
-name = "ani-sage"
-version = "0.1.0"
-description = "AI-powered anime recommendation system"
-requires-python = ">=3.8"
-license = "GPL-3.0"
-authors = [
-    {name = "TenDev", email = "tendev@example.com"}
-]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.dependencies]
-python = "^3.8"
-requests = "^2.31.0"
-pydantic = "^2.5.0"
+[project]
+name = "ani-sage"
+version = "0.1.0"
+authors = [
+  { name="tendev", email="tendev@example.com" },
+]
+description = "An AI-powered anime recommendation system"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "pydantic>=2.6.1",
+    "aiohttp>=3.9.3",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
+addopts = "-v"
+markers = [
+    "integration: marks tests as integration tests"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/tendev/ani-sage"
+"Bug Tracker" = "https://github.com/tendev/ani-sage/issues"
