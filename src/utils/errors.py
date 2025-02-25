@@ -90,6 +90,21 @@ class ValidationError(AniSageError):
         super().__init__(message, "VALIDATION_ERROR", details, "WARNING")
 
 
+class AnalysisError(AniSageError):
+    """Exception raised for AI analysis errors."""
+    def __init__(
+        self,
+        message: str,
+        code: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
+    ):
+        if model:
+            details = details or {}
+            details["model"] = model
+        super().__init__(message, code or "ANALYSIS_ERROR", details)
+
+
 def handle_exception(
     exc: Exception,
     exc_type: Optional[Type[E]] = None,
