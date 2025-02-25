@@ -23,14 +23,14 @@ def run_tests(args):
 
     # Determine which tests to run
     if args.test:
-        test_path = f"worktrees/ai-features/tests/test_{args.test}.py"
+        test_path = f"tests/test_{args.test}.py"
         if not Path(test_path).exists():
             print(f"Error: Test file {test_path} does not exist.")
             return 1
 
         cmd = [sys.executable, "-m", "unittest", test_path]
     else:
-        cmd = [sys.executable, "-m", "unittest", "discover", "-s", "worktrees/ai-features/tests"]
+        cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
 
     # Set verbosity
     if args.verbose:
@@ -48,7 +48,7 @@ def run_demo(args):
     """
     print("===== Running AI Features Demo =====")
 
-    script_path = "worktrees/ai-features/scripts/demo_recommendations.py"
+    script_path = "scripts/demo_recommendations.py"
     if not Path(script_path).exists():
         print(f"Error: Demo script {script_path} does not exist.")
         return 1
@@ -66,7 +66,7 @@ def run_sentiment_cli(args):
     """
     print("===== Running Sentiment Analysis CLI =====")
 
-    script_path = "worktrees/ai-features/src/cli/sentiment_cli.py"
+    script_path = "src/cli/sentiment_cli.py"
     if not Path(script_path).exists():
         print(f"Error: Sentiment CLI script {script_path} does not exist.")
         return 1
@@ -98,11 +98,11 @@ def setup_openai(args):
     Args:
         args: Command-line arguments
     """
-    print("===== Setting Up OpenAI API =====")
+    print("===== Running OpenAI API Setup =====")
 
-    script_path = "worktrees/ai-features/scripts/setup_openai.py"
+    script_path = "scripts/setup_openai.py"
     if not Path(script_path).exists():
-        print(f"Error: Setup script {script_path} does not exist.")
+        print(f"Error: OpenAI setup script {script_path} does not exist.")
         return 1
 
     # Build command
@@ -125,6 +125,35 @@ def setup_openai(args):
 
     if args.temperature:
         cmd.extend(["--temperature", str(args.temperature)])
+
+    if args.verbose:
+        cmd.append("--verbose")
+
+    return subprocess.call(cmd)
+
+
+def run_recommendation_cli(args):
+    """Run the recommendation engine CLI.
+
+    Args:
+        args: Command-line arguments
+    """
+    print("===== Running Recommendation Engine CLI =====")
+
+    script_path = "scripts/demo_recommendations.py"
+    if not Path(script_path).exists():
+        print(f"Error: Recommendation CLI script {script_path} does not exist.")
+        return 1
+
+    # Build command
+    cmd = [sys.executable, script_path]
+
+    # Add arguments for trailer options
+    if args.no_trailers:
+        cmd.extend(["--no-trailers"])
+
+    if args.limit:
+        cmd.extend(["--limit", str(args.limit)])
 
     if args.verbose:
         cmd.append("-v")
@@ -237,6 +266,23 @@ def main():
         help="Enable verbose output for sentiment analysis"
     )
 
+    # Recommendation CLI command
+    recommendation_parser = subparsers.add_parser(
+        "recommend",
+        help="Run the recommendation engine CLI"
+    )
+    recommendation_parser.add_argument(
+        "--no-trailers",
+        action="store_true",
+        help="Disable trailer lookups"
+    )
+    recommendation_parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum number of recommendations to show"
+    )
+
     # Setup OpenAI command
     setup_parser = subparsers.add_parser(
         "setup-openai",
@@ -288,6 +334,8 @@ def main():
         return run_demo(args)
     elif args.command == "sentiment":
         return run_sentiment_cli(args)
+    elif args.command == "recommend":
+        return run_recommendation_cli(args)
     elif args.command == "setup-openai":
         return setup_openai(args)
     else:
