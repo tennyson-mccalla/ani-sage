@@ -73,6 +73,9 @@ def setup_logging(
     if log_file:
         root_logger.debug(f"Logging to file: {log_file}")
 
+# Alias for setup_logging to maintain compatibility with scripts
+configure_logging = setup_logging
+
 def get_logger(name: str) -> logging.Logger:
     """Get a named logger with consistent configuration.
 

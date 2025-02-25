@@ -73,54 +73,59 @@ class SentimentAnalyzer:
             # Define the prompt for sentiment analysis
             prompt = """
             Analyze the following anime description or text for sentiment, emotional tone, themes, and target audience.
-            Provide your analysis in JSON format with the following structure:
+            Provide your analysis as a valid JSON object with the following structure (without comments):
             {
-                "positivity": float,  # Overall positivity score from -1.0 (very negative) to 1.0 (very positive)
-                "intensity": float,  # Emotional intensity from 0.0 (neutral) to 1.0 (intense)
+                "positivity": <float>,
+                "intensity": <float>,
                 "emotions": {
-                    "joy": float,  # Score from 0.0 to 1.0
-                    "sadness": float,
-                    "anger": float,
-                    "fear": float,
-                    "surprise": float,
-                    "anticipation": float,
-                    "trust": float,
-                    "disgust": float,
-                    "melancholy": float,
-                    "excitement": float,
-                    "comfort": float,
-                    "tension": float
+                    "joy": <float>,
+                    "sadness": <float>,
+                    "anger": <float>,
+                    "fear": <float>,
+                    "surprise": <float>,
+                    "anticipation": <float>,
+                    "trust": <float>,
+                    "disgust": <float>,
+                    "melancholy": <float>,
+                    "excitement": <float>,
+                    "comfort": <float>,
+                    "tension": <float>
                 },
                 "themes": {
-                    "action": float,  # Score from 0.0 to 1.0
-                    "adventure": float,
-                    "comedy": float,
-                    "drama": float,
-                    "fantasy": float,
-                    "horror": float,
-                    "mystery": float,
-                    "romance": float,
-                    "science_fiction": float,
-                    "slice_of_life": float,
-                    "sports": float,
-                    "supernatural": float,
-                    "psychological": float,
-                    "philosophical": float,
-                    "historical": float,
-                    "coming_of_age": float
+                    "action": <float>,
+                    "adventure": <float>,
+                    "comedy": <float>,
+                    "drama": <float>,
+                    "fantasy": <float>,
+                    "horror": <float>,
+                    "mystery": <float>,
+                    "romance": <float>,
+                    "science_fiction": <float>,
+                    "slice_of_life": <float>,
+                    "sports": <float>,
+                    "supernatural": <float>,
+                    "psychological": <float>,
+                    "philosophical": <float>,
+                    "historical": <float>,
+                    "coming_of_age": <float>
                 },
                 "target_audience": {
-                    "children": float,  # Score from 0.0 to 1.0
-                    "teens": float,
-                    "young_adults": float,
-                    "adults": float,
-                    "male": float,
-                    "female": float,
-                    "general": float
+                    "children": <float>,
+                    "teens": <float>,
+                    "young_adults": <float>,
+                    "adults": <float>,
+                    "male": <float>,
+                    "female": <float>,
+                    "general": <float>
                 }
             }
 
-            Respond with ONLY the JSON object, no additional text.
+            For positivity, use a scale from -1.0 (very negative) to 1.0 (very positive).
+            For intensity, use a scale from 0.0 (neutral) to 1.0 (intense).
+            For all other scores, use values from 0.0 to 1.0.
+
+            Respond with ONLY the valid JSON object, no comments, no additional text.
+            Ensure the JSON is properly formatted without any trailing commas.
             """
 
             # Get analysis from OpenAI
