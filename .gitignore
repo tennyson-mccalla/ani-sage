@@ -1,3 +1,21 @@
+# Documentation (internal use)
+CHECKLIST.md
+LESSONS.md
+MIGRATION.md
+ONBOARDING.md
+project_context.md
+main-dev-instructions.md
+
+# Git worktrees
+worktrees/
+ani-sage-worktrees/*/venv/
+ani-sage-worktrees/*/.env
+ani-sage-worktrees/*/__pycache__/
+
+# Project specific
+.ani-sage-cache/
+.ani-sage-data/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -24,13 +42,22 @@ wheels/
 venv/
 env/
 ENV/
+.env
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
 
-# Project specific
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Environment variables
 .env
-config.local.yml
+.env.*
+!.env.example
