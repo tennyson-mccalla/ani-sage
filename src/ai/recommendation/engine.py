@@ -6,7 +6,9 @@ based on user preferences, sentiment analysis, and content features.
 """
 
 import math
+import os
 from typing import Dict, List, Optional, Set, Tuple, Union
+import asyncio
 import numpy as np
 from pydantic import BaseModel, Field
 
@@ -17,6 +19,13 @@ from src.ai.models.openai_client import get_openai_client
 from src.utils.logging import get_logger
 from src.utils.errors import AnalysisError
 
+# Import YouTube client for trailer lookups
+try:
+    from src.api.providers.youtube.client import YouTubeClient
+    YOUTUBE_CLIENT_AVAILABLE = True
+except ImportError:
+    YOUTUBE_CLIENT_AVAILABLE = False
+
 logger = get_logger(__name__)
 
 
@@ -25,6 +34,10 @@ class RecommendationResult(BaseModel):
     anime: Anime
     score: float = Field(..., description="Recommendation score from 0.0 to 1.0")
     explanation: Optional[str] = None
+    trailer_url: Optional[str] = Field(None, description="URL to the anime trailer on YouTube")
+    trailer_thumbnail: Optional[str] = Field(None, description="URL to the trailer thumbnail image")
+    trailer_title: Optional[str] = Field(None, description="Title of the trailer video")
+    trailer_channel: Optional[str] = Field(None, description="YouTube channel that published the trailer")
 
 
 class RecommendationOptions(BaseModel):
@@ -36,6 +49,7 @@ class RecommendationOptions(BaseModel):
     studio_weight: float = Field(0.2, description="Weight for studio-based recommendations")
     sentiment_weight: float = Field(0.5, description="Weight for sentiment-based recommendations")
     generate_explanations: bool = Field(True, description="Whether to generate explanations")
+    include_trailers: bool = Field(False, description="Whether to fetch trailer information from YouTube")
 
 
 class RecommendationEngine:
@@ -46,7 +60,68 @@ class RecommendationEngine:
         self._anime_catalog: Dict[str, Anime] = {}
         self.sentiment_analyzer = get_sentiment_analyzer()
         self.openai_client = get_openai_client()
+
+        # Initialize YouTube client if available
+        self.youtube_client = None
+        self._trailer_cache = {}  # Cache for trailer lookups
+        self._event_loop = None  # Shared event loop for async operations
+        self._closing = False  # Flag to track if we're shutting down
+
+        if YOUTUBE_CLIENT_AVAILABLE:
+            api_key = os.environ.get("YOUTUBE_API_KEY")
+            if api_key:
+                self.youtube_client = YouTubeClient(api_key=api_key)
+                logger.debug("YouTube client initialized for trailer lookups")
+            else:
+                logger.warning("YOUTUBE_API_KEY environment variable not set, trailer lookups disabled")
+
         logger.debug("Recommendation engine initialized")
+
+    def __del__(self):
+        """Clean up resources when the engine is destroyed."""
+        self._cleanup_event_loop()
+
+    def _cleanup_event_loop(self):
+        """Clean up the async event loop if it exists."""
+        # Mark as closing to prevent new operations
+        self._closing = True
+
+        # First, close the YouTube client session if it exists
+        if self.youtube_client and hasattr(self.youtube_client, 'close'):
+            try:
+                # Create a temp event loop if needed to close the YouTube client
+                if not self._event_loop or self._event_loop.is_closed():
+                    temp_loop = asyncio.new_event_loop()
+                    temp_loop.run_until_complete(self.youtube_client.close())
+                    temp_loop.close()
+                else:
+                    # Use existing event loop
+                    self._event_loop.run_until_complete(self.youtube_client.close())
+                logger.debug("YouTube client session closed")
+            except Exception as e:
+                logger.warning(f"Error closing YouTube client session: {e}")
+
+        # Then close the event loop if it exists and is not closed
+        if self._event_loop and not self._event_loop.is_closed():
+            try:
+                pending = asyncio.all_tasks(self._event_loop)
+                if pending:
+                    # Cancel any pending tasks
+                    for task in pending:
+                        task.cancel()
+                    # Run the event loop until tasks are cancelled
+                    self._event_loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+                # Finally close the loop
+                self._event_loop.close()
+                logger.debug("Event loop closed and cleaned up")
+            except Exception as e:
+                logger.warning(f"Error during event loop cleanup: {e}")
+            finally:
+                self._event_loop = None
+
+        # Reset closing flag
+        self._closing = False
 
     def add_anime(self, anime: Anime) -> None:
         """Add an anime to the recommendation catalog.
@@ -222,6 +297,102 @@ class RecommendationEngine:
             else:
                 return "Recommended based on your viewing history and preferences."
 
+    async def _fetch_anime_trailer(self, anime_title: str) -> Dict[str, Optional[str]]:
+        """Fetch trailer information for an anime from YouTube.
+
+        Args:
+            anime_title: Title of the anime to find a trailer for
+
+        Returns:
+            Dict containing trailer information (URL, thumbnail, title, channel)
+        """
+        # Initialize empty result
+        trailer_info = {
+            "url": None,
+            "thumbnail": None,
+            "title": None,
+            "channel": None
+        }
+
+        # Check cache first
+        if anime_title in self._trailer_cache:
+            return self._trailer_cache[anime_title]
+
+        # Make sure YouTube client is available
+        if not self.youtube_client:
+            return trailer_info
+
+        try:
+            # Search for trailer
+            response = await self.youtube_client.search_anime_trailer(
+                anime_title=anime_title,
+                max_results=1
+            )
+
+            # Extract trailer info if found
+            if response.data and len(response.data) > 0:
+                video = response.data[0]
+                trailer_info = {
+                    "url": f"https://www.youtube.com/watch?v={video.id}",
+                    "thumbnail": video.snippet.thumbnails.get('high', video.snippet.thumbnails.get('default')).url,
+                    "title": video.snippet.title,
+                    "channel": video.snippet.channelTitle
+                }
+
+                # Cache the result
+                self._trailer_cache[anime_title] = trailer_info
+                logger.debug(f"Found trailer for {anime_title}")
+            else:
+                logger.debug(f"No trailer found for {anime_title}")
+
+        except Exception as e:
+            logger.warning(f"Error finding trailer for {anime_title}: {e}")
+
+        return trailer_info
+
+    def _fetch_trailer_sync(self, anime_title: str) -> Dict[str, Optional[str]]:
+        """Synchronous wrapper for _fetch_anime_trailer.
+
+        Args:
+            anime_title: Title of the anime to find a trailer for
+
+        Returns:
+            Dict containing trailer information
+        """
+        # If no YouTube client or we're shutting down, return empty result
+        if not self.youtube_client or self._closing:
+            return {
+                "url": None,
+                "thumbnail": None,
+                "title": None,
+                "channel": None
+            }
+
+        # Check cache first
+        if anime_title in self._trailer_cache:
+            return self._trailer_cache[anime_title]
+
+        # Create a singleton event loop for all trailer lookups if needed
+        need_new_loop = False
+        if self._event_loop is None or self._event_loop.is_closed():
+            need_new_loop = True
+            self._event_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._event_loop)
+
+        # Run the async method in the shared event loop
+        try:
+            result = self._event_loop.run_until_complete(self._fetch_anime_trailer(anime_title))
+            # Don't close the loop - keep it for future trailer lookups
+            return result
+        except Exception as e:
+            logger.warning(f"Error in trailer lookup: {e}")
+            return {
+                "url": None,
+                "thumbnail": None,
+                "title": None,
+                "channel": None
+            }
+
     def get_recommendations(
         self,
         user_prefs: UserPreferences,
@@ -295,11 +466,28 @@ class RecommendationEngine:
             if options.generate_explanations:
                 explanation = self._generate_explanation(anime, user_prefs)
 
+            # Fetch trailer information if requested
+            trailer_url = None
+            trailer_thumbnail = None
+            trailer_title = None
+            trailer_channel = None
+
+            if options.include_trailers and YOUTUBE_CLIENT_AVAILABLE:
+                trailer_info = self._fetch_trailer_sync(anime.title)
+                trailer_url = trailer_info["url"]
+                trailer_thumbnail = trailer_info["thumbnail"]
+                trailer_title = trailer_info["title"]
+                trailer_channel = trailer_info["channel"]
+
             # Add to results
             results.append(RecommendationResult(
                 anime=anime,
                 score=total_score,
-                explanation=explanation
+                explanation=explanation,
+                trailer_url=trailer_url,
+                trailer_thumbnail=trailer_thumbnail,
+                trailer_title=trailer_title,
+                trailer_channel=trailer_channel
             ))
 
         # Sort by score and limit

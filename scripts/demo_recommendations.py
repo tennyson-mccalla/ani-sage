@@ -11,9 +11,17 @@ import sys
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
+import argparse
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Import dotenv for environment variable management
+try:
+    from dotenv import load_dotenv
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
 
 from src.ai.models.anime import Anime, AnimeType, AnimeStatus, AnimeSeason
 from src.ai.recommendation.engine import get_recommendation_engine, RecommendationOptions
@@ -22,6 +30,16 @@ from src.ai.preferences.user_preferences import get_user_preferences, Mood
 from src.utils.logging import get_logger, configure_logging
 
 logger = get_logger(__name__)
+
+# ANSI color codes for terminal formatting
+RESET = "\033[0m"
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+MAGENTA = "\033[35m"
+CYAN = "\033[36m"
 
 # Sample anime descriptions for demo purposes
 SAMPLE_ANIME = [
@@ -136,16 +154,18 @@ def create_anime_object(anime_data: Dict) -> Anime:
     )
 
 
-def analyze_anime_sentiments(anime_list: List[Anime]) -> List[Anime]:
+def analyze_anime_sentiments(anime_list: List[Anime], engine=None) -> List[Anime]:
     """Analyze sentiments for a list of anime.
 
     Args:
         anime_list: List of anime to analyze
+        engine: Optional recommendation engine instance to use
 
     Returns:
         List[Anime]: The analyzed anime with sentiment data
     """
-    engine = get_recommendation_engine()
+    if engine is None:
+        engine = get_recommendation_engine()
 
     print("\n=== Analyzing Anime Sentiments ===")
     for i, anime in enumerate(anime_list):
@@ -233,17 +253,21 @@ def setup_user_preferences() -> str:
     return user_id
 
 
-def get_recommendations(user_id: str, anime_list: List[Anime]) -> None:
+def get_recommendations(user_id: str, anime_list: List[Anime], include_trailers: bool, limit: int, engine=None) -> None:
     """Get and display recommendations for a user.
 
     Args:
         user_id: User ID to get recommendations for
         anime_list: List of anime to recommend from
+        include_trailers: Whether to include trailers in recommendations
+        limit: Maximum number of recommendations to show
+        engine: Optional recommendation engine instance to use
     """
     print("\n=== Generating Recommendations ===")
 
     # Get recommendation engine and user preferences
-    engine = get_recommendation_engine()
+    if engine is None:
+        engine = get_recommendation_engine()
     user_prefs = get_user_preferences(user_id)
 
     # Add anime to the recommendation engine
@@ -251,12 +275,13 @@ def get_recommendations(user_id: str, anime_list: List[Anime]) -> None:
 
     # Set up recommendation options
     options = RecommendationOptions(
-        limit=3,
+        limit=limit,
         include_watched=False,
         mood_weight=0.7,
         genre_weight=0.8,
         sentiment_weight=0.6,
-        generate_explanations=True
+        generate_explanations=True,
+        include_trailers=include_trailers
     )
 
     # Get recommendations
@@ -272,6 +297,13 @@ def get_recommendations(user_id: str, anime_list: List[Anime]) -> None:
         if rec.explanation:
             print(f"   Why: {rec.explanation}")
 
+        # Display trailer information if available
+        if rec.trailer_url:
+            print(f"\n   {GREEN}Trailer:{RESET} {rec.trailer_title}")
+            print(f"   {GREEN}Channel:{RESET} {rec.trailer_channel}")
+            print(f"   {GREEN}Watch:{RESET} {rec.trailer_url}")
+            print(f"   {GREEN}Thumbnail:{RESET} {rec.trailer_thumbnail}")
+
     # Display genre preferences for reference
     print("\nYour genre preferences:")
     for genre, weight in sorted(user_prefs.genre_preferences.items()):
@@ -281,39 +313,120 @@ def get_recommendations(user_id: str, anime_list: List[Anime]) -> None:
 
 def main():
     """Run the recommendation demo."""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Anime recommendation demo")
+    parser.add_argument("--no-trailers", action="store_true", help="Disable trailer lookups")
+    parser.add_argument("--limit", type=int, default=3, help="Maximum number of recommendations to show")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("--api-key", type=str, help="OpenAI API key (overrides environment variable)")
+    parser.add_argument("--youtube-key", type=str, help="YouTube API key (overrides environment variable)")
+    parser.add_argument("--env-file", type=str, help="Path to .env file for API keys")
+    args = parser.parse_args()
+
     # Configure logging
-    configure_logging(log_level="INFO")
+    log_level = "DEBUG" if args.verbose else "INFO"
+    configure_logging(log_level=log_level)
 
-    print("===================================================")
-    print("  ani-sage AI Features Demo: Recommendation Engine  ")
-    print("===================================================")
+    # Create a list to track resources that need cleanup
+    resources_to_cleanup = []
 
-    # Check if OpenAI API key is available
-    if not os.environ.get("OPENAI_API_KEY"):
-        print("\nWarning: No OpenAI API key found in environment variables.")
-        print("For best results, please set the OPENAI_API_KEY environment variable.")
-        print("You can also set up the API key using the setup_openai.py script.")
+    try:
+        print("===================================================")
+        print("  ani-sage AI Features Demo: Recommendation Engine  ")
+        print("===================================================")
 
-        key = input("\nWould you like to enter an OpenAI API key now? (y/n): ")
-        if key.lower() == 'y':
-            api_key = input("Enter OpenAI API key: ")
-            os.environ["OPENAI_API_KEY"] = api_key
-        else:
-            print("Running without API key. Demo will use mock data.")
+        # Load environment variables
+        if DOTENV_AVAILABLE:
+            # Try to load from different potential locations
+            env_paths = [
+                args.env_file if args.env_file else None,                # User-specified path
+                Path(__file__).resolve().parent.parent / ".env",         # Project root .env
+                Path(__file__).resolve().parent.parent.parent / ".env",  # Parent directory .env
+                Path(__file__).resolve().parent.parent.parent / "api-integration" / ".env"  # api-integration .env
+            ]
 
-    # Create anime objects
-    anime_list = [create_anime_object(anime) for anime in SAMPLE_ANIME]
+            env_loaded = False
+            for env_path in env_paths:
+                if env_path and Path(env_path).exists():
+                    load_dotenv(env_path)
+                    print(f"{GREEN}Environment variables loaded from{RESET} {env_path}")
+                    env_loaded = True
+                    break
 
-    # Analyze sentiment for each anime
-    anime_list = analyze_anime_sentiments(anime_list)
+            if not env_loaded and args.verbose:
+                print(f"{YELLOW}No .env file found for loading environment variables{RESET}")
+        elif args.verbose:
+            print(f"{YELLOW}python-dotenv not installed. Using existing environment variables only.{RESET}")
 
-    # Set up user preferences
-    user_id = setup_user_preferences()
+        # Handle API keys (command-line overrides environment variables)
+        if args.api_key:
+            os.environ["OPENAI_API_KEY"] = args.api_key
+            print(f"{GREEN}Using OpenAI API key from command line{RESET}")
 
-    # Get recommendations
-    get_recommendations(user_id, anime_list)
+        if args.youtube_key:
+            os.environ["YOUTUBE_API_KEY"] = args.youtube_key
+            print(f"{GREEN}Using YouTube API key from command line{RESET}")
 
-    print("\nDemo completed successfully!")
+        # Check if OpenAI API key is available
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            print(f"\n{YELLOW}Warning: No OpenAI API key found in environment variables.{RESET}")
+            print("For best results, please set the OPENAI_API_KEY environment variable.")
+            print("You can also set up the API key using the setup_openai.py script.")
+
+            key = input("\nWould you like to enter an OpenAI API key now? (y/n): ")
+            if key.lower() == 'y':
+                api_key = input("Enter OpenAI API key: ")
+                os.environ["OPENAI_API_KEY"] = api_key
+                print(f"{GREEN}API key set for this session{RESET}")
+            else:
+                print(f"{YELLOW}Running without API key. Some features may not work correctly.{RESET}")
+
+        # Check if YouTube API key is available
+        youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
+        if not youtube_api_key and not args.no_trailers:
+            print(f"\n{YELLOW}Warning: No YouTube API key found in environment variables.{RESET}")
+            print("Trailer recommendations require a YouTube API key.")
+
+            key_choice = input("Would you like to enter a YouTube API key now? (y/n): ")
+            if key_choice.lower() == 'y':
+                youtube_key = input("Enter YouTube API key: ")
+                os.environ["YOUTUBE_API_KEY"] = youtube_key
+                print(f"{GREEN}YouTube API key set for this session{RESET}")
+            else:
+                print(f"{YELLOW}Running without YouTube API key. Trailer lookups will be disabled.{RESET}")
+                args.no_trailers = True
+
+        # Create anime objects
+        anime_list = [create_anime_object(anime) for anime in SAMPLE_ANIME]
+
+        # Get the recommendation engine
+        engine = get_recommendation_engine()
+        resources_to_cleanup.append(engine)
+
+        # Analyze sentiment for each anime
+        anime_list = analyze_anime_sentiments(anime_list, engine)
+
+        # Set up user preferences
+        user_id = setup_user_preferences()
+
+        # Configure recommendation options
+        trailer_option = not args.no_trailers  # Include trailers unless disabled
+        rec_limit = args.limit
+
+        # Get recommendations
+        get_recommendations(user_id, anime_list, trailer_option, rec_limit, engine)
+
+        print(f"\n{GREEN}Demo completed successfully!{RESET}")
+
+    finally:
+        # Clean up resources
+        for resource in resources_to_cleanup:
+            if hasattr(resource, '_cleanup_event_loop'):
+                try:
+                    resource._cleanup_event_loop()
+                except Exception as e:
+                    logger.warning(f"Error during resource cleanup: {e}")
 
 
 if __name__ == "__main__":
