@@ -118,3 +118,7 @@ def debug_log(message: str) -> None:
     """
     if os.getenv("DEBUG") == "1":
         core_logger.debug(message)
+
+# Alias for setup_logging to maintain compatibility with scripts
+configure_logging = setup_logging
+
