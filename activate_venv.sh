@@ -1,0 +1,3 @@
+#!/bin/bash
+echo Activating AI features virtual environment...
+source /Users/tendev/ani-sage/worktrees/ai-features/venv/bin/activate
