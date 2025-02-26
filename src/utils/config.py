@@ -22,6 +22,7 @@ class ConfigSection(str, Enum):
     ANIME = "anime"
     PREFERENCES = "preferences"
     LOGGING = "logging"
+    AI = "ai"
 
 
 class Config(BaseModel):
@@ -228,7 +229,7 @@ class Config(BaseModel):
         try:
             self._ensure_dirs()
 
-            # Create organized configuration structure
+            # Create organized configuration structure with base values
             data = {
                 "paths": {
                     "config_dir": str(self.config_dir),
@@ -245,16 +246,29 @@ class Config(BaseModel):
                 },
                 "logging": {
                     "level": self.log_level,
-                }
+                },
+                "ai": {}
             }
 
-            # Add optional values
+            # Add optional standard values
             if self.mal_client_id:
                 data["apis"]["mal_client_id"] = self.mal_client_id
             if self.anilist_token:
                 data["apis"]["anilist_token"] = self.anilist_token
             if self.log_file:
                 data["logging"]["file"] = self.log_file
+
+            # Read custom values from all sections and update the data dictionary
+            for section in ConfigSection:
+                try:
+                    # Get values for this section that might have been added with __setitem__
+                    custom_values = getattr(self, f"_{section.value}_values", {})
+                    if custom_values:
+                        logger.debug(f"Adding custom values for section {section.value}: {custom_values}")
+                        # Update the section data with the custom values
+                        data[section.value].update(custom_values)
+                except Exception as e:
+                    logger.error(f"Error adding custom values for section {section.value}: {e}")
 
             logger.debug(f"Saving configuration to {self.config_path}")
             with open(self.config_path.expanduser(), "wb") as f:
@@ -383,41 +397,61 @@ class Config(BaseModel):
         Raises:
             ConfigError: If the section is invalid or values cannot be updated
         """
+        logger.debug(f"update_section called with section: {section} (type: {type(section)}), values: {values}")
         if isinstance(section, str):
             try:
-                section = ConfigSection(section.lower())
-            except ValueError:
-                raise ConfigError(f"Invalid configuration section: {section}")
+                logger.debug(f"Section is a string: '{section}', attempting to convert to ConfigSection enum")
+                # Try to match regardless of case
+                for s in ConfigSection:
+                    logger.debug(f"Checking against ConfigSection.{s.name} (value: {s.value})")
+                    if s.name.lower() == section.lower() or s.value.lower() == section.lower():
+                        logger.debug(f"Found matching enum: {s}")
+                        section = s
+                        break
+                else:
+                    logger.debug(f"No matching enum found for '{section}'")
+                    # List all valid sections
+                    valid_sections = [f"{s.name} ({s.value})" for s in ConfigSection]
+                    logger.debug(f"Valid sections are: {valid_sections}")
+                    raise ValueError(f"Invalid configuration section: {section}")
+            except Exception as e:
+                error_msg = f"Invalid configuration section: {section}"
+                logger.error(error_msg)
+                logger.debug(f"Available sections: {[s.value for s in ConfigSection]}")
+                raise ConfigError(error_msg)
 
-        try:
-            if section == ConfigSection.PATHS:
-                for key, value in values.items():
-                    if key in ["config_dir", "cache_dir", "data_dir"]:
-                        setattr(self, key, Path(value))
-            elif section == ConfigSection.APIS:
-                for key, value in values.items():
-                    if key in ["mal_client_id", "anilist_token"]:
-                        setattr(self, key, value)
-            elif section == ConfigSection.ANIME:
-                if "dirs" in values:
-                    self.anime_dirs = [Path(p) for p in values["dirs"]]
-            elif section == ConfigSection.PREFERENCES:
-                for key, value in values.items():
-                    if key in ["theme", "language"]:
-                        setattr(self, key, value)
-            elif section == ConfigSection.LOGGING:
-                for key, value in values.items():
-                    if key in ["level", "file"]:
-                        setattr(self, key, value)
-            else:
-                raise ConfigError(f"Unknown configuration section: {section}")
+        # Validate that the section is a ConfigSection
+        if not isinstance(section, ConfigSection):
+            logger.error(f"Section {section} is not a valid ConfigSection enum")
+            raise ConfigError(f"Invalid configuration section: {section}")
 
-            # Validate and save the updated configuration
-            self.validate()
-            self.save()
+        logger.debug(f"Processing section enum: {section}")
 
-        except Exception as e:
-            raise ConfigError(f"Failed to update configuration section {section}: {str(e)}")
+        # Store the values in a section-specific attribute that save() can access
+        section_attr = f"_{section.value}_values"
+
+        # Initialize the attribute if it doesn't exist
+        if not hasattr(self, section_attr):
+            setattr(self, section_attr, {})
+
+        # Get the current values
+        current_values = getattr(self, section_attr)
+
+        # Update the values dictionary
+        for k, v in values.items():
+            logger.debug(f"Setting {section.value}.{k} = {v}")
+            current_values[k] = v
+
+        # Save the updated dictionary back to the attribute
+        setattr(self, section_attr, current_values)
+
+        # Validate and save changes
+        logger.debug("Validating updated configuration")
+        self.validate()
+        logger.debug("Saving updated configuration")
+        self.save()
+
+        return self
 
     def reset(self) -> None:
         """Reset configuration to defaults."""
@@ -437,6 +471,65 @@ class Config(BaseModel):
 
         except Exception as e:
             raise ConfigError(f"Failed to reset configuration: {str(e)}")
+
+    def __getitem__(self, section: ConfigSection) -> Dict[str, Any]:
+        """Access configuration sections using dictionary-like syntax.
+
+        Args:
+            section: The ConfigSection to access
+
+        Returns:
+            Dictionary of configuration values for the section
+
+        Raises:
+            ConfigError: If the section is invalid
+        """
+        logger.debug(f"__getitem__ called with section: {section}")
+        try:
+            # Return a copy of the section data to avoid unintended modifications
+            return dict(self.get_section(section))
+        except Exception as e:
+            logger.error(f"Error accessing section {section}: {e}")
+            raise ConfigError(f"Failed to access configuration section {section}: {e}")
+
+    def __setitem__(self, section: ConfigSection, values: Dict[str, Any]) -> None:
+        """Set configuration values for a section using dictionary-like syntax.
+
+        Args:
+            section: The ConfigSection to update
+            values: Dictionary of values to set
+
+        Raises:
+            ConfigError: If the section is invalid or values cannot be updated
+        """
+        logger.debug(f"__setitem__ called with section: {section}, values: {values}")
+        try:
+            # Store the values in a section-specific attribute that save() can access
+            section_attr = f"_{section.value}_values"
+
+            # Initialize the attribute if it doesn't exist
+            if not hasattr(self, section_attr):
+                setattr(self, section_attr, {})
+
+            # Get the current values
+            current_values = getattr(self, section_attr)
+
+            # Update the values dictionary
+            for k, v in values.items():
+                logger.debug(f"Setting {section.value}.{k} = {v}")
+                current_values[k] = v
+
+            # Save the updated dictionary back to the attribute
+            setattr(self, section_attr, current_values)
+
+            # Validate and save changes
+            logger.debug("Validating updated configuration from __setitem__")
+            self.validate()
+            logger.debug("Saving updated configuration from __setitem__")
+            self.save()
+        except Exception as e:
+            logger.error(f"Error updating section {section}: {e}")
+            raise ConfigError(f"Failed to update configuration section {section}: {e}")
 
 # Global configuration instance
 _config_instance: Optional[Config] = None

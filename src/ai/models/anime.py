@@ -11,6 +11,9 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+# Add import for AnimeVisualProfile
+from src.ai.preferences.color_preferences import AnimeVisualProfile
+
 
 class AnimeType(str, Enum):
     """Types of anime content."""
@@ -104,6 +107,12 @@ class Anime(BaseModel):
 
     # Extracted features for recommendation
     features: AnimeFeatures = Field(default_factory=AnimeFeatures)
+
+    # Visual profile for color analysis
+    visual_profile: Optional[AnimeVisualProfile] = Field(None, description="Visual color profile data")
+
+    # Image URL for thumbnails
+    image_url: Optional[str] = Field(None, description="URL to anime cover image or thumbnail")
 
     # Cache field for similarity scores
     _similarity_cache: Dict[str, float] = {}

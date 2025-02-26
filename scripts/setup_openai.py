@@ -14,7 +14,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.utils.config import get_config
+from src.utils.config import get_config, ConfigSection
 from src.utils.errors import ConfigError
 from src.utils.logging import get_logger, configure_logging
 
@@ -34,7 +34,7 @@ def setup_openai_config(
     Args:
         api_key: OpenAI API key
         organization: OpenAI organization ID (optional)
-        model: Model to use for completions (default: gpt-3.5-turbo)
+        model: Model to use for completions (default: gpt-4o-mini)
         embedding_model: Model to use for embeddings (default: text-embedding-ada-002)
         max_tokens: Maximum tokens for completions (default: 256)
         temperature: Temperature for completions (default: 0.7)
@@ -100,10 +100,21 @@ def setup_openai_config(
 
                 ai_values['openai'] = openai_values
 
-                # Update the config section
-                config.update_section('ai', ai_values)
-                logger.info("OpenAI configuration updated in AI section")
-                return True
+                # Update the config section - ensure correct case by using lowercase 'ai'
+                # The enum ConfigSection.AI has value 'ai' (lowercase)
+                logger.debug("Calling update_section with 'ai' section (lowercase)")
+
+                logger.debug("Available ConfigSection values:")
+                for section in ConfigSection:
+                    logger.debug(f"  - {section.name}: '{section.value}'")
+
+                try:
+                    config.update_section('ai', ai_values)
+                    logger.info("OpenAI configuration updated in AI section")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error updating AI section: {e}", exc_info=True)
+                    raise ConfigError(f"Failed to update configuration: {e}")
 
             # If we can't update the config through normal means, try environment variables
             os.environ["OPENAI_API_KEY"] = api_key
@@ -162,7 +173,7 @@ def main():
     )
     parser.add_argument(
         "--model", "-m",
-        help="Model to use for completions (default: gpt-3.5-turbo)"
+        help="Model to use for completions (default: gpt-4o-mini)"
     )
     parser.add_argument(
         "--embedding-model", "-e",

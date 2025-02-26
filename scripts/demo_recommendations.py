@@ -244,13 +244,13 @@ def setup_user_preferences(interactive=False) -> str:
         try:
             fzf = FzfPrompt()
             print("\nSelect genres you like (TAB to select multiple, ENTER to confirm):")
-            selected_genres = fzf.prompt(genres, "--multi --header='Select genres you LIKE (TAB to select multiple)'")
+            selected_genres = fzf.prompt(genres, "--multi --no-sort --layout=reverse --header='Select genres you LIKE (TAB to select multiple)'")
             for genre in selected_genres:
                 user_prefs.update_genre_preference(genre.lower(), 1.0)
                 print(f"Added {genre} to liked genres.")
 
             print("\nSelect genres you dislike (TAB to select multiple, ENTER to confirm):")
-            disliked_genres = fzf.prompt(genres, "--multi --header='Select genres you DISLIKE (TAB to select multiple)'")
+            disliked_genres = fzf.prompt(genres, "--multi --no-sort --layout=reverse --header='Select genres you DISLIKE (TAB to select multiple)'")
             for genre in disliked_genres:
                 user_prefs.update_genre_preference(genre.lower(), -1.0)
                 print(f"Added {genre} to disliked genres.")
@@ -288,7 +288,7 @@ def setup_user_preferences(interactive=False) -> str:
             mood_options = [f"{num}: {mood.value}" for num, mood in moods.items()]
             fzf = FzfPrompt()
             print("\nSelect your current mood:")
-            selected_mood = fzf.prompt(mood_options, "--header='Select your current mood'")[0]
+            selected_mood = fzf.prompt(mood_options, "--no-sort --layout=reverse --header='Select your current mood'")[0]
             mood_num = selected_mood.split(":")[0]
             if mood_num in moods:
                 user_prefs.set_mood(moods[mood_num])
@@ -383,15 +383,29 @@ def get_recommendations(user_id, anime_list, include_trailers=True, limit=5, eng
                 print(f"\n{i+1}. {rec.anime.title} (Score: {rec.score:.2f})")
                 print(f"   Genres: {', '.join(rec.anime.genres)}")
                 print(f"   Studio: {', '.join(rec.anime.studios)}")
-                if rec.explanation:
-                    print(f"   Why: {rec.explanation}")
 
-                # Display trailer information if available
-                if rec.trailer_url:
-                    print(f"\n   {GREEN}Trailer:{RESET} {rec.trailer_title}")
-                    print(f"   {GREEN}Channel:{RESET} {rec.trailer_channel}")
-                    print(f"   {GREEN}Watch:{RESET} {rec.trailer_url}")
-                    print(f"   {GREEN}Thumbnail:{RESET} {rec.trailer_thumbnail}")
+                # Check for different attribute names to support both RecommendationResult and Recommendation classes
+                explanation_text = None
+                if hasattr(rec, 'rationale') and rec.rationale:
+                    explanation_text = rec.rationale
+                elif hasattr(rec, 'explanation') and rec.explanation:
+                    explanation_text = rec.explanation
+
+                if explanation_text:
+                    print(f"   Why: {explanation_text}")
+
+                # Check for trailer-related attributes
+                trailer_url = None
+                if hasattr(rec, 'trailer_url') and rec.trailer_url:
+                    trailer_url = rec.trailer_url
+                    trailer_title = getattr(rec, 'trailer_title', 'Trailer')
+                    trailer_channel = getattr(rec, 'trailer_channel', 'YouTube')
+                    trailer_thumbnail = getattr(rec, 'trailer_thumbnail', 'No thumbnail')
+
+                    print(f"\n   {GREEN}Trailer:{RESET} {trailer_title}")
+                    print(f"   {GREEN}Channel:{RESET} {trailer_channel}")
+                    print(f"   {GREEN}Watch:{RESET} {trailer_url}")
+                    print(f"   {GREEN}Thumbnail:{RESET} {trailer_thumbnail}")
         else:  # Simplified engine returns anime objects directly
             for i, anime in enumerate(recommendations):
                 print(f"\n{i+1}. {anime.title} ({anime.year})")
@@ -538,8 +552,15 @@ def get_fallback_recommendation_engine():
                 rec = Recommendation(
                     anime=anime,
                     score=min(1.0, max(0.0, score)),  # Clamp between 0 and 1
-                    explanation=f"Matches {len([g for g in anime.genres if g in user_prefs.genre_preferences])} of your preferred genres."
+                    rationale=f"Matches {len([g for g in anime.genres if g in user_prefs.genre_preferences])} of your preferred genres."
                 )
+
+                # Add dummy trailer data in demo mode
+                if options and hasattr(options, 'include_trailers') and options.include_trailers:
+                    rec.trailer_url = f"https://www.youtube.com/watch?v=dummyid-{anime.id}"
+                    rec.trailer_title = f"{anime.title} - Official Trailer"
+                    rec.trailer_channel = "AnimeChannel"
+                    rec.trailer_thumbnail = f"https://img.youtube.com/vi/dummyid-{anime.id}/hqdefault.jpg"
 
                 scores.append(rec)
 
@@ -639,9 +660,8 @@ def main():
 
         # Determine if we should include trailers
         include_trailers = (
-            not args.no_trailers and
-            not args.demo_mode and
-            os.environ.get("YOUTUBE_API_KEY") is not None
+            not args.no_trailers and  # User didn't explicitly disable trailers
+            (args.demo_mode or os.environ.get("YOUTUBE_API_KEY") is not None)  # Either in demo mode or has API key
         )
 
         # Get recommendations

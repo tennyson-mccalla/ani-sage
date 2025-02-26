@@ -17,3 +17,7 @@ numpy>=1.24.0      # For numerical operations (required by RecommendationEngine)
 # tensorflow>=2.14.0  # For advanced ML features (optional)
 # pandas>=2.0.0      # For data manipulation
 pyfzf>=0.3.1  # For FZF interface integration
+
+# Image processing and color analysis
+Pillow>=10.0.0  # For image processing and manipulation
+colorthief>=0.2.1  # For extracting color palettes from images

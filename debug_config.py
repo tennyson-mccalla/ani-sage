@@ -42,7 +42,7 @@ def main():
             'test': 'value',
             'openai': {
                 'api_key': 'test_api_key_123',
-                'model': 'gpt-3.5-turbo',
+                'model': 'gpt-4o-mini',
                 'embedding_model': 'text-embedding-ada-002'
             }
         })
