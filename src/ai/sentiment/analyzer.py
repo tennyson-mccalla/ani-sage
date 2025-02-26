@@ -130,10 +130,23 @@ class SentimentAnalyzer:
 
             # Get analysis from OpenAI
             response = self.client.analyze_text(text, prompt=prompt)
+            logger.debug(f"Raw response from OpenAI: {response}")
 
-            # Parse JSON response
+            # Parse JSON response - add more robust parsing
             try:
-                data = json.loads(response)
+                # Try to extract JSON from response in case there's extra text
+                json_start = response.find('{')
+                json_end = response.rfind('}') + 1
+
+                if json_start != -1 and json_end > json_start:
+                    # Extract the JSON part
+                    json_text = response[json_start:json_end]
+                    logger.debug(f"Extracted JSON: {json_text}")
+                    data = json.loads(json_text)
+                else:
+                    # If no JSON-like structure found, try the original response
+                    logger.debug("No JSON structure found, trying to parse the entire response")
+                    data = json.loads(response)
 
                 # Create and return the result
                 return SentimentResult(
@@ -147,6 +160,35 @@ class SentimentAnalyzer:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse sentiment analysis response: {e}")
                 logger.debug(f"Raw response: {response}")
+
+                # Try a more lenient JSON parser
+                try:
+                    import re
+                    # Replace invalid character sequences
+                    cleaned_response = re.sub(r'[\x00-\x1F\x7F]', '', response)
+                    # Try to fix common JSON issues
+                    cleaned_response = cleaned_response.replace("'", '"').replace('\n', ' ')
+                    logger.debug(f"Trying with cleaned response: {cleaned_response}")
+
+                    # Look for JSON-like structure again
+                    match = re.search(r'(\{.*\})', cleaned_response, re.DOTALL)
+                    if match:
+                        potential_json = match.group(1)
+                        logger.debug(f"Found potential JSON: {potential_json}")
+                        data = json.loads(potential_json)
+
+                        return SentimentResult(
+                            positivity=data.get("positivity", 0.0),
+                            intensity=data.get("intensity", 0.0),
+                            emotions=data.get("emotions", {}),
+                            themes=data.get("themes", {}),
+                            target_audience=data.get("target_audience", {}),
+                            raw_analysis=response
+                        )
+                except Exception as fallback_error:
+                    logger.error(f"Fallback parsing also failed: {fallback_error}")
+
+                # If all parsing attempts fail, raise the original error
                 raise AnalysisError(f"Failed to parse sentiment analysis response: {e}")
 
         except Exception as e:

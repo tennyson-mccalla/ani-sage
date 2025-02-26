@@ -1,48 +1,109 @@
-"""API-specific error types for ani-sage."""
+"""
+Error types for API modules.
 
-# Import from the main error handling module
-from ...utils.errors import AniSageError, APIError as BaseAPIError
+These error classes provide structured error handling for API operations.
+"""
 
-# For backward compatibility, keep separate API error classes
-# but make them inherit from our unified error system
-
-class APIError(BaseAPIError):
-    """Base exception for API-related errors.
-
-    This class is kept for backward compatibility.
-    New code should use utils.errors.APIError directly.
-    """
-    def __init__(self, message: str, status_code: int = None):
-        super().__init__(
-            message=message,
-            code="API_ERROR",
-            details={"status_code": status_code} if status_code else None,
-            status_code=status_code
-        )
+from typing import Dict, Any, Optional
 
 
-class RateLimitError(APIError):
-    """Exception raised when API rate limit is exceeded."""
-    def __init__(self, message: str = "Rate limit exceeded"):
-        super().__init__(message, status_code=429)
+class APIError(Exception):
+    """Base class for all API-related errors."""
+
+    def __init__(
+        self,
+        message: str,
+        code: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize an API error.
+
+        Args:
+            message: Error message
+            code: Error code
+            details: Additional error details
+        """
+        self.message = message
+        self.code = code or "API_ERROR"
+        self.details = details or {}
+        super().__init__(message)
 
 
 class AuthenticationError(APIError):
     """Exception raised for authentication failures."""
-    def __init__(self, message: str = "Authentication failed"):
-        super().__init__(message, status_code=401)
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(message, "AUTH_ERROR", details)
 
 
 class ValidationError(APIError):
-    """Exception raised for invalid request data."""
-    def __init__(self, message: str = "Invalid request data"):
-        super().__init__(message, status_code=400)
+    """Exception raised for invalid request parameters."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(message, "VALIDATION_ERROR", details)
 
 
-class NotFoundError(APIError):
-    """Exception raised when requested resource is not found."""
-    def __init__(self, message: str = "Resource not found"):
-        super().__init__(message, status_code=404)
+class RateLimitError(APIError):
+    """Exception raised when rate limits are exceeded."""
+
+    def __init__(
+        self,
+        message: str,
+        retry_after: Optional[int] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        details = details or {}
+        if retry_after:
+            details["retry_after"] = retry_after
+        super().__init__(message, "RATE_LIMIT_ERROR", details)
+
+
+class QuotaExceededError(APIError):
+    """Exception raised when API quotas are exceeded."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(message, "QUOTA_EXCEEDED_ERROR", details)
+
+
+class NetworkError(APIError):
+    """Exception raised for network connectivity issues."""
+
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(message, "NETWORK_ERROR", details)
+
+
+class ResourceNotFoundError(APIError):
+    """Exception raised when a requested resource is not found."""
+
+    def __init__(
+        self,
+        message: str,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        details = details or {}
+        if resource_type:
+            details["resource_type"] = resource_type
+        if resource_id:
+            details["resource_id"] = resource_id
+        super().__init__(message, "RESOURCE_NOT_FOUND", details)
 
 
 # Export a warning about deprecation

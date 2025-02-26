@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 class OpenAIConfig(BaseModel):
     """Configuration for the OpenAI client."""
     api_key: str
-    model: str = "gpt-3.5-turbo"
+    model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-ada-002"
     max_tokens: int = 1024
     temperature: float = 0.7
@@ -59,7 +59,7 @@ class OpenAIClient:
         """
         # First try environment variables
         api_key = os.environ.get("OPENAI_API_KEY")
-        model = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
         # Initialize config variable for future checks
         config = None
