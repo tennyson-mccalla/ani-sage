@@ -16,3 +16,4 @@ numpy>=1.24.0      # For numerical operations (required by RecommendationEngine)
 # Optional dependencies (uncomment if needed)
 # tensorflow>=2.14.0  # For advanced ML features (optional)
 # pandas>=2.0.0      # For data manipulation
+pyfzf>=0.3.1  # For FZF interface integration

@@ -3,6 +3,54 @@ Recommendation engine for anime suggestions.
 
 This module provides the core functionality for generating anime recommendations
 based on user preferences, sentiment analysis, and content features.
+
+The recommendation engine combines multiple factors to score and rank anime:
+- User preferences (genres, mood, studios, etc.)
+- Sentiment analysis of anime descriptions and reviews
+- Content similarity between anime titles
+- Watch history (optional)
+
+Key components:
+- RecommendationEngine: The main class that handles recommendation generation
+- RecommendationOptions: Configuration options for the recommendation process
+- RecommendationResult: Container for a single recommendation result
+
+Usage examples:
+```python
+# Basic usage
+from src.ai.recommendation.engine import get_recommendation_engine
+from src.ai.preferences.user_preferences import get_user_preferences
+
+# Get or create user preferences
+user_prefs = get_user_preferences(user_id="user123")
+
+# Get recommendations
+engine = get_recommendation_engine()
+recommendations = engine.get_recommendations(user_prefs)
+
+# Process and display recommendations
+for rec in recommendations:
+    print(f"{rec.anime.title}: {rec.score:.2f} - {rec.explanation}")
+    if rec.trailer_url:
+        print(f"Watch trailer: {rec.trailer_url}")
+```
+
+Advanced configuration:
+```python
+from src.ai.recommendation.engine import RecommendationOptions
+
+# Configure recommendation options
+options = RecommendationOptions(
+    limit=5,                    # Return only 5 recommendations
+    include_watched=False,      # Skip previously watched anime
+    mood_weight=0.6,            # Prioritize mood matching
+    genre_weight=0.4,           # Reduce genre importance
+    include_trailers=True       # Fetch trailer links from YouTube
+)
+
+# Get customized recommendations
+custom_recommendations = engine.get_recommendations(user_prefs, options)
+```
 """
 
 import math

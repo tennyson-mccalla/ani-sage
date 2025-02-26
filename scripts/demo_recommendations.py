@@ -23,6 +23,13 @@ try:
 except ImportError:
     DOTENV_AVAILABLE = False
 
+# Import pyfzf for interactive selection
+try:
+    from pyfzf import FzfPrompt
+    FZF_AVAILABLE = True
+except ImportError:
+    FZF_AVAILABLE = False
+
 from src.ai.models.anime import Anime, AnimeType, AnimeStatus, AnimeSeason
 from src.ai.recommendation.engine import get_recommendation_engine, RecommendationOptions
 from src.ai.sentiment.analyzer import get_sentiment_analyzer
@@ -154,6 +161,18 @@ def create_anime_object(anime_data: Dict) -> Anime:
     )
 
 
+def create_sample_anime() -> List[Anime]:
+    """Create sample anime objects from the SAMPLE_ANIME data.
+
+    Returns:
+        List[Anime]: List of anime objects
+    """
+    print("\n=== Creating Sample Anime Database ===")
+    anime_list = [create_anime_object(anime) for anime in SAMPLE_ANIME]
+    print(f"Created {len(anime_list)} sample anime entries")
+    return anime_list
+
+
 def analyze_anime_sentiments(anime_list: List[Anime], engine=None) -> List[Anime]:
     """Analyze sentiments for a list of anime.
 
@@ -197,8 +216,11 @@ def analyze_anime_sentiments(anime_list: List[Anime], engine=None) -> List[Anime
     return anime_list
 
 
-def setup_user_preferences() -> str:
+def setup_user_preferences(interactive=False) -> str:
     """Set up user preferences interactively.
+
+    Args:
+        interactive: Whether to use FZF interactive interface for selection
 
     Returns:
         str: The user ID
@@ -217,13 +239,34 @@ def setup_user_preferences() -> str:
     genres = ["action", "adventure", "comedy", "drama", "fantasy", "horror",
              "mystery", "romance", "sci-fi", "slice_of_life", "sports", "supernatural"]
 
-    for genre in genres:
+    # Use FZF for genre selection if interactive mode and FZF available
+    if interactive and FZF_AVAILABLE:
         try:
-            rating = input(f"How do you feel about {genre}? (-1 to 1, or skip): ")
-            if rating.strip():
-                user_prefs.update_genre_preference(genre, float(rating))
-        except ValueError:
-            print("Invalid input, skipping.")
+            fzf = FzfPrompt()
+            print("\nSelect genres you like (TAB to select multiple, ENTER to confirm):")
+            selected_genres = fzf.prompt(genres, "--multi --header='Select genres you LIKE (TAB to select multiple)'")
+            for genre in selected_genres:
+                user_prefs.update_genre_preference(genre.lower(), 1.0)
+                print(f"Added {genre} to liked genres.")
+
+            print("\nSelect genres you dislike (TAB to select multiple, ENTER to confirm):")
+            disliked_genres = fzf.prompt(genres, "--multi --header='Select genres you DISLIKE (TAB to select multiple)'")
+            for genre in disliked_genres:
+                user_prefs.update_genre_preference(genre.lower(), -1.0)
+                print(f"Added {genre} to disliked genres.")
+        except Exception as e:
+            print(f"Error using FZF: {e}. Falling back to standard input.")
+            interactive = False
+
+    # Standard input method for genre selection
+    if not interactive or not FZF_AVAILABLE:
+        for genre in genres:
+            try:
+                rating = input(f"How do you feel about {genre}? (-1 to 1, or skip): ")
+                if rating.strip():
+                    user_prefs.update_genre_preference(genre, float(rating))
+            except ValueError:
+                print("Invalid input, skipping.")
 
     # Set mood
     print("\nWhat's your current mood?")
@@ -239,194 +282,387 @@ def setup_user_preferences() -> str:
         "9": Mood.ANY
     }
 
-    for num, mood in moods.items():
-        print(f"{num}: {mood.value}")
-
-    mood_choice = input("Select a mood (1-9): ")
-    if mood_choice in moods:
-        user_prefs.set_mood(moods[mood_choice])
+    # Use FZF for mood selection if interactive mode and FZF available
+    if interactive and FZF_AVAILABLE:
+        try:
+            mood_options = [f"{num}: {mood.value}" for num, mood in moods.items()]
+            fzf = FzfPrompt()
+            print("\nSelect your current mood:")
+            selected_mood = fzf.prompt(mood_options, "--header='Select your current mood'")[0]
+            mood_num = selected_mood.split(":")[0]
+            if mood_num in moods:
+                user_prefs.set_mood(moods[mood_num])
+                print(f"Mood set to: {moods[mood_num].value}")
+            else:
+                print("Invalid choice, defaulting to ANY")
+                user_prefs.set_mood(Mood.ANY)
+        except Exception as e:
+            print(f"Error using FZF: {e}. Falling back to standard input.")
+            for num, mood in moods.items():
+                print(f"{num}: {mood.value}")
+            mood_choice = input("Select a mood (1-9): ")
+            if mood_choice in moods:
+                user_prefs.set_mood(moods[mood_choice])
+            else:
+                print("Invalid choice, defaulting to ANY")
+                user_prefs.set_mood(Mood.ANY)
     else:
-        print("Invalid choice, defaulting to ANY")
-        user_prefs.set_mood(Mood.ANY)
+        for num, mood in moods.items():
+            print(f"{num}: {mood.value}")
+        mood_choice = input("Select a mood (1-9): ")
+        if mood_choice in moods:
+            user_prefs.set_mood(moods[mood_choice])
+        else:
+            print("Invalid choice, defaulting to ANY")
+            user_prefs.set_mood(Mood.ANY)
 
     print(f"\nUser preferences set up with ID: {user_id}")
     return user_id
 
 
-def get_recommendations(user_id: str, anime_list: List[Anime], include_trailers: bool, limit: int, engine=None) -> None:
-    """Get and display recommendations for a user.
+def get_recommendations(user_id, anime_list, include_trailers=True, limit=5, engine=None):
+    """Get recommendations for the user.
 
     Args:
         user_id: User ID to get recommendations for
-        anime_list: List of anime to recommend from
-        include_trailers: Whether to include trailers in recommendations
-        limit: Maximum number of recommendations to show
+        anime_list: List of anime objects
+        include_trailers: Whether to include trailers in results
+        limit: Maximum number of recommendations
         engine: Optional recommendation engine instance to use
     """
-    print("\n=== Generating Recommendations ===")
+    if not engine:
+        # Attempt to get regular engine or fall back to simplified
+        try:
+            engine = get_recommendation_engine()
+        except Exception:
+            engine = get_fallback_recommendation_engine()
 
-    # Get recommendation engine and user preferences
-    if engine is None:
-        engine = get_recommendation_engine()
-    user_prefs = get_user_preferences(user_id)
+    print("\n=== Getting Recommendations ===")
 
-    # Add anime to the recommendation engine
-    engine.add_anime_batch(anime_list)
+    try:
+        # Get user preferences
+        user_prefs = get_user_preferences(user_id)
 
-    # Set up recommendation options
-    options = RecommendationOptions(
-        limit=limit,
-        include_watched=False,
-        mood_weight=0.7,
-        genre_weight=0.8,
-        sentiment_weight=0.6,
-        generate_explanations=True,
-        include_trailers=include_trailers
-    )
+        # Check if engine has add_anime_batch method (real engine)
+        if hasattr(engine, 'add_anime_batch'):
+            # Add anime to the recommendation engine
+            engine.add_anime_batch(anime_list)
 
-    # Get recommendations
-    print(f"Getting recommendations for user with mood: {user_prefs.current_mood.value}")
-    recs = engine.get_recommendations(user_prefs, options)
+            # Set up recommendation options
+            options = RecommendationOptions(
+                limit=limit,
+                include_watched=False,
+                mood_weight=0.7,
+                genre_weight=0.8,
+                sentiment_weight=0.6,
+                generate_explanations=True,
+                include_trailers=include_trailers
+            )
 
-    # Display recommendations
-    print(f"\nTop {len(recs)} Recommendations:")
-    for i, rec in enumerate(recs):
-        print(f"\n{i+1}. {rec.anime.title} (Score: {rec.score:.2f})")
-        print(f"   Genres: {', '.join(rec.anime.genres)}")
-        print(f"   Studio: {', '.join(rec.anime.studios)}")
-        if rec.explanation:
-            print(f"   Why: {rec.explanation}")
+            # Get recommendations using the standard interface
+            recommendations = engine.get_recommendations(user_prefs, options)
+        else:
+            # Using our simplified engine that takes different parameters
+            recommendations = engine.get_recommendations(
+                anime_list=anime_list,
+                user_id=user_id,
+                limit=limit,
+                include_trailers=include_trailers
+            )
 
-        # Display trailer information if available
-        if rec.trailer_url:
-            print(f"\n   {GREEN}Trailer:{RESET} {rec.trailer_title}")
-            print(f"   {GREEN}Channel:{RESET} {rec.trailer_channel}")
-            print(f"   {GREEN}Watch:{RESET} {rec.trailer_url}")
-            print(f"   {GREEN}Thumbnail:{RESET} {rec.trailer_thumbnail}")
+        # Display recommendations
+        if not recommendations:
+            print("No recommendations found.")
+            return
 
-    # Display genre preferences for reference
-    print("\nYour genre preferences:")
-    for genre, weight in sorted(user_prefs.genre_preferences.items()):
-        if abs(weight) > 0.1:
-            print(f"  {genre}: {weight:.1f}")
+        print(f"\nTop {len(recommendations)} Recommendations:")
+
+        # Check the type of recommendations to determine how to display them
+        if hasattr(engine, 'add_anime_batch'):  # Real engine returns recommendation objects
+            for i, rec in enumerate(recommendations):
+                print(f"\n{i+1}. {rec.anime.title} (Score: {rec.score:.2f})")
+                print(f"   Genres: {', '.join(rec.anime.genres)}")
+                print(f"   Studio: {', '.join(rec.anime.studios)}")
+                if rec.explanation:
+                    print(f"   Why: {rec.explanation}")
+
+                # Display trailer information if available
+                if rec.trailer_url:
+                    print(f"\n   {GREEN}Trailer:{RESET} {rec.trailer_title}")
+                    print(f"   {GREEN}Channel:{RESET} {rec.trailer_channel}")
+                    print(f"   {GREEN}Watch:{RESET} {rec.trailer_url}")
+                    print(f"   {GREEN}Thumbnail:{RESET} {rec.trailer_thumbnail}")
+        else:  # Simplified engine returns anime objects directly
+            for i, anime in enumerate(recommendations):
+                print(f"\n{i+1}. {anime.title} ({anime.year})")
+
+                # Print attributes
+                print(f"   Genres: {', '.join(anime.genres)}")
+                if hasattr(anime, 'themes') and anime.themes:
+                    print(f"   Themes: {', '.join(anime.themes)}")
+
+                # Print score if available
+                if hasattr(anime, 'recommendation_score'):
+                    print(f"   Match Score: {anime.recommendation_score:.2f}")
+
+                # Print sentiment if available
+                if hasattr(anime, 'features') and anime.features and anime.features.sentiment:
+                    print("   Sentiment Analysis:")
+                    for key, value in anime.features.sentiment.items():
+                        print(f"     {key.capitalize()}: {value:.2f}")
+
+                # Print emotions if available
+                if hasattr(anime, 'features') and anime.features and anime.features.emotion_profile:
+                    top_emotions = sorted(
+                        anime.features.emotion_profile.items(),
+                        key=lambda x: x[1],
+                        reverse=True
+                    )[:3]
+
+                    if top_emotions:
+                        emotions_str = ", ".join([f"{e} ({s:.2f})" for e, s in top_emotions])
+                        print(f"   Top Emotions: {emotions_str}")
+
+                # Print trailer if available
+                if hasattr(anime, 'trailer_url') and anime.trailer_url:
+                    print(f"   Trailer: {anime.trailer_url}")
+
+        # Display genre preferences for reference
+        print("\nYour genre preferences:")
+        for genre, weight in sorted(user_prefs.genre_preferences.items()):
+            if abs(weight) > 0.1:
+                print(f"  {genre}: {weight:.1f}")
+
+    except Exception as e:
+        print(f"Error getting recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+    return
+
+
+def check_api_keys():
+    """Check for required API keys and log warnings if missing."""
+    # Check if OpenAI API key is available
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        print(f"\n{YELLOW}Warning: No OpenAI API key found in environment variables.{RESET}")
+        print("For best results, please set the OPENAI_API_KEY in your .env file.")
+        print("Some features may not work correctly without a valid API key.")
+    else:
+        print(f"{GREEN}OpenAI API key found in environment.{RESET}")
+
+    # Check if YouTube API key is available
+    youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
+    if not youtube_api_key:
+        print(f"\n{YELLOW}Warning: No YouTube API key found in environment variables.{RESET}")
+        print("Trailer recommendations require a YouTube API key in your .env file.")
+        print("Trailer lookups will be disabled.")
+    else:
+        print(f"{GREEN}YouTube API key found in environment.{RESET}")
+
+
+def get_fallback_recommendation_engine():
+    """Get a simplified recommendation engine that doesn't require API keys.
+
+    This is used when no API keys are available but we still want to run the demo.
+
+    Returns:
+        A simplified recommendation engine object
+    """
+    print(f"\n{YELLOW}Using simplified recommendation engine without API integrations.{RESET}")
+
+    # Import necessary modules
+    from src.ai.recommendation.models import Recommendation
+
+    # Create a simple object with the necessary methods for the demo
+    class SimplifiedEngine:
+        def __init__(self):
+            self.anime_list = []
+
+        def add_anime_batch(self, anime_list):
+            """Add a batch of anime to the engine.
+
+            Args:
+                anime_list: List of anime to add
+            """
+            self.anime_list.extend(anime_list)
+            print(f"Added {len(anime_list)} anime to recommendation engine.")
+
+        def get_recommendations(self, user_prefs, options=None):
+            """Return recommendations based on user preferences.
+
+            Args:
+                user_prefs: User preferences object
+                options: Optional recommendation options
+
+            Returns:
+                List of recommendation objects
+            """
+            # Handle the case where the old interface is used
+            if isinstance(user_prefs, str) and 'anime_list' in options:
+                # This is a call from our simplified version
+                user_id = user_prefs
+                user_prefs = get_user_preferences(user_id)
+                self.anime_list = options['anime_list']
+
+            # Get limit from options
+            limit = 10
+            if options and hasattr(options, 'limit'):
+                limit = options.limit
+
+            # Filter anime based on preferences
+            scores = []
+
+            # Simple filtering logic
+            for anime in self.anime_list:
+                score = 0.5  # Base score
+
+                # Check genres
+                for genre in anime.genres:
+                    if genre in user_prefs.genre_preferences:
+                        score += user_prefs.genre_preferences[genre] * 0.2
+
+                # Add a mood bonus if mood matches
+                if user_prefs.current_mood == Mood.ANY:
+                    # No specific mood preference
+                    score += 0.1
+                elif user_prefs.current_mood == Mood.HAPPY and hasattr(anime, 'features') and anime.features.sentiment:
+                    # Bonus for happy anime when in happy mood
+                    score += anime.features.sentiment.get('positivity', 0) * 0.2
+                elif user_prefs.current_mood == Mood.SAD and hasattr(anime, 'features') and anime.features.sentiment:
+                    # Bonus for emotional anime when in sad mood
+                    score += anime.features.sentiment.get('intensity', 0) * 0.2
+
+                # Create a recommendation object
+                rec = Recommendation(
+                    anime=anime,
+                    score=min(1.0, max(0.0, score)),  # Clamp between 0 and 1
+                    explanation=f"Matches {len([g for g in anime.genres if g in user_prefs.genre_preferences])} of your preferred genres."
+                )
+
+                scores.append(rec)
+
+            # Sort by score
+            scores.sort(key=lambda x: x.score, reverse=True)
+
+            # Return top N results
+            return scores[:limit]
+
+    return SimplifiedEngine()
 
 
 def main():
-    """Run the recommendation demo."""
+    """Run the recommendation engine demo."""
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Anime recommendation demo")
-    parser.add_argument("--no-trailers", action="store_true", help="Disable trailer lookups")
-    parser.add_argument("--limit", type=int, default=3, help="Maximum number of recommendations to show")
+    parser.add_argument("--no-trailers", action="store_true", help="Skip trailer lookup")
+    parser.add_argument("--limit", type=int, default=10, help="Number of recommendations to show")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--api-key", type=str, help="OpenAI API key (overrides environment variable)")
-    parser.add_argument("--youtube-key", type=str, help="YouTube API key (overrides environment variable)")
-    parser.add_argument("--env-file", type=str, help="Path to .env file for API keys")
+    parser.add_argument("-i", "--interactive", action="store_true", help="Use interactive FZF interface for selection")
+    parser.add_argument("--demo-mode", action="store_true", help="Run in demo mode without API calls")
+
     args = parser.parse_args()
 
     # Configure logging
     log_level = "DEBUG" if args.verbose else "INFO"
     configure_logging(log_level=log_level)
 
-    # Create a list to track resources that need cleanup
-    resources_to_cleanup = []
+    # Check if FZF is available when interactive mode is requested
+    if args.interactive and not FZF_AVAILABLE:
+        print("Warning: Interactive mode requested but pyfzf module not available.")
+        print("Install with: pip install pyfzf")
+        print("Falling back to standard input mode.\n")
+        args.interactive = False
 
+    # Load environment variables from .env file if dotenv is available
+    if DOTENV_AVAILABLE:
+        print("Loading environment variables from .env file...")
+        load_dotenv()
+    else:
+        print(f"{YELLOW}Warning: python-dotenv is not installed. Environment variables will not be loaded from .env file.{RESET}")
+        print("Install with: pip install python-dotenv")
+
+    # Run the demo
     try:
-        print("===================================================")
-        print("  ani-sage AI Features Demo: Recommendation Engine  ")
-        print("===================================================")
+        # Create sample anime objects
+        anime_list = create_sample_anime()
 
-        # Load environment variables
-        if DOTENV_AVAILABLE:
-            # Try to load from different potential locations
-            env_paths = [
-                args.env_file if args.env_file else None,                # User-specified path
-                Path(__file__).resolve().parent.parent / ".env",         # Project root .env
-                Path(__file__).resolve().parent.parent.parent / ".env",  # Parent directory .env
-                Path(__file__).resolve().parent.parent.parent / "api-integration" / ".env"  # api-integration .env
-            ]
+        # Check if API keys are available in the environment (from .env)
+        if not args.demo_mode:
+            check_api_keys()
+        else:
+            print("\n=== Running in Demo Mode - Skipping API Key Checks ===")
+            os.environ["OPENAI_API_KEY"] = "dummy-key"
+            os.environ["YOUTUBE_API_KEY"] = "dummy-key"
 
-            env_loaded = False
-            for env_path in env_paths:
-                if env_path and Path(env_path).exists():
-                    load_dotenv(env_path)
-                    print(f"{GREEN}Environment variables loaded from{RESET} {env_path}")
-                    env_loaded = True
-                    break
+        # Get the appropriate recommendation engine based on available API keys
+        has_openai_api_key = bool(os.environ.get("OPENAI_API_KEY"))
 
-            if not env_loaded and args.verbose:
-                print(f"{YELLOW}No .env file found for loading environment variables{RESET}")
-        elif args.verbose:
-            print(f"{YELLOW}python-dotenv not installed. Using existing environment variables only.{RESET}")
+        if has_openai_api_key and not args.demo_mode:
+            try:
+                engine = get_recommendation_engine()
+            except Exception as e:
+                print(f"{YELLOW}Error initializing recommendation engine: {str(e)}{RESET}")
+                print("Falling back to simplified recommendation engine.")
+                engine = get_fallback_recommendation_engine()
+        else:
+            engine = get_fallback_recommendation_engine()
 
-        # Handle API keys (command-line overrides environment variables)
-        if args.api_key:
-            os.environ["OPENAI_API_KEY"] = args.api_key
-            print(f"{GREEN}Using OpenAI API key from command line{RESET}")
+        # Check if we should do sentiment analysis
+        should_analyze_sentiments = not args.demo_mode and has_openai_api_key
 
-        if args.youtube_key:
-            os.environ["YOUTUBE_API_KEY"] = args.youtube_key
-            print(f"{GREEN}Using YouTube API key from command line{RESET}")
-
-        # Check if OpenAI API key is available
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
-        if not openai_api_key:
-            print(f"\n{YELLOW}Warning: No OpenAI API key found in environment variables.{RESET}")
-            print("For best results, please set the OPENAI_API_KEY environment variable.")
-            print("You can also set up the API key using the setup_openai.py script.")
-
-            key = input("\nWould you like to enter an OpenAI API key now? (y/n): ")
-            if key.lower() == 'y':
-                api_key = input("Enter OpenAI API key: ")
-                os.environ["OPENAI_API_KEY"] = api_key
-                print(f"{GREEN}API key set for this session{RESET}")
+        # Analyze sentiment for each anime (if we have an API key)
+        if should_analyze_sentiments:
+            try:
+                anime_list = analyze_anime_sentiments(anime_list, engine)
+            except Exception as e:
+                print(f"{YELLOW}Error during sentiment analysis: {str(e)}{RESET}")
+                print("Continuing with dummy sentiment data.")
+                # Add dummy sentiment data
+                for anime in anime_list:
+                    anime.features.sentiment = {"positivity": 0.8, "intensity": 0.7}
+                    anime.features.emotion_profile = {"joy": 0.7, "anticipation": 0.6, "trust": 0.5}
+        else:
+            if args.demo_mode:
+                print("\n=== Demo Mode: Skipping Sentiment Analysis ===")
             else:
-                print(f"{YELLOW}Running without API key. Some features may not work correctly.{RESET}")
+                print("\n=== Skipping Sentiment Analysis (No OpenAI API Key) ===")
 
-        # Check if YouTube API key is available
-        youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
-        if not youtube_api_key and not args.no_trailers:
-            print(f"\n{YELLOW}Warning: No YouTube API key found in environment variables.{RESET}")
-            print("Trailer recommendations require a YouTube API key.")
-
-            key_choice = input("Would you like to enter a YouTube API key now? (y/n): ")
-            if key_choice.lower() == 'y':
-                youtube_key = input("Enter YouTube API key: ")
-                os.environ["YOUTUBE_API_KEY"] = youtube_key
-                print(f"{GREEN}YouTube API key set for this session{RESET}")
-            else:
-                print(f"{YELLOW}Running without YouTube API key. Trailer lookups will be disabled.{RESET}")
-                args.no_trailers = True
-
-        # Create anime objects
-        anime_list = [create_anime_object(anime) for anime in SAMPLE_ANIME]
-
-        # Get the recommendation engine
-        engine = get_recommendation_engine()
-        resources_to_cleanup.append(engine)
-
-        # Analyze sentiment for each anime
-        anime_list = analyze_anime_sentiments(anime_list, engine)
+            # Add some dummy sentiment data
+            for anime in anime_list:
+                anime.features.sentiment = {"positivity": 0.8, "intensity": 0.7}
+                anime.features.emotion_profile = {"joy": 0.7, "anticipation": 0.6, "trust": 0.5}
 
         # Set up user preferences
-        user_id = setup_user_preferences()
+        user_id = setup_user_preferences(args.interactive)
 
-        # Configure recommendation options
-        trailer_option = not args.no_trailers  # Include trailers unless disabled
-        rec_limit = args.limit
+        # Determine if we should include trailers
+        include_trailers = (
+            not args.no_trailers and
+            not args.demo_mode and
+            os.environ.get("YOUTUBE_API_KEY") is not None
+        )
 
         # Get recommendations
-        get_recommendations(user_id, anime_list, trailer_option, rec_limit, engine)
+        get_recommendations(
+            user_id=user_id,
+            anime_list=anime_list,
+            include_trailers=include_trailers,
+            limit=args.limit,
+            engine=engine
+        )
 
-        print(f"\n{GREEN}Demo completed successfully!{RESET}")
+        print("\nDemo completed successfully!")
+        return 0
 
-    finally:
-        # Clean up resources
-        for resource in resources_to_cleanup:
-            if hasattr(resource, '_cleanup_event_loop'):
-                try:
-                    resource._cleanup_event_loop()
-                except Exception as e:
-                    logger.warning(f"Error during resource cleanup: {e}")
+    except KeyboardInterrupt:
+        print("\nDemo interrupted by user.")
+        return 1
+    except Exception as e:
+        logger.exception("Error running demo")
+        print(f"\nError: {e}")
+        return 1
 
 
 if __name__ == "__main__":

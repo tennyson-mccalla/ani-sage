@@ -155,6 +155,14 @@ def run_recommendation_cli(args):
     if args.limit:
         cmd.extend(["--limit", str(args.limit)])
 
+    # Add new argument for FZF interface
+    if args.interactive:
+        cmd.append("--interactive")
+
+    # Add demo mode flag if specified
+    if args.demo_mode:
+        cmd.append("--demo-mode")
+
     if args.verbose:
         cmd.append("-v")
 
@@ -281,6 +289,18 @@ def main():
         type=int,
         default=5,
         help="Maximum number of recommendations to show"
+    )
+    # Add new argument for FZF interface
+    recommendation_parser.add_argument(
+        "-i", "--interactive",
+        action="store_true",
+        help="Use interactive FZF interface for selection"
+    )
+    # Add demo mode argument
+    recommendation_parser.add_argument(
+        "--demo-mode",
+        action="store_true",
+        help="Run in demo mode without API calls"
     )
 
     # Setup OpenAI command

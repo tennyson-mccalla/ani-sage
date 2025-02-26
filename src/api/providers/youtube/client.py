@@ -1,4 +1,59 @@
-"""YouTube API client implementation."""
+"""
+YouTube API client implementation.
+
+This module provides a client for the YouTube Data API v3, primarily used to
+search for anime trailers and retrieve video information. It requires a valid
+YouTube API key with quota available.
+
+Key Components:
+- YouTubeClient: Main client class for interacting with YouTube API
+- Video: Model representing a YouTube video with its metadata
+- VideoSnippet: Contains video metadata like title, description, etc.
+- VideoThumbnail: Represents a video thumbnail with URL and dimensions
+
+Usage Examples:
+```python
+# Basic initialization
+from src.api.providers.youtube.client import YouTubeClient
+import asyncio
+
+# Initialize with API key
+client = YouTubeClient(api_key="your_youtube_api_key")
+
+# Search for anime trailers
+async def search_example():
+    # Search for "Demon Slayer trailer"
+    response = await client.search_videos("Demon Slayer trailer")
+
+    # Get first search result
+    if response.data and "items" in response.data:
+        video = response.data["items"][0]
+        video_id = video["id"]["videoId"]
+        title = video["snippet"]["title"]
+        print(f"Found: {title} (https://youtube.com/watch?v={video_id})")
+
+# Get specific anime trailer
+async def get_trailer():
+    response = await client.search_anime_trailer("One Punch Man")
+
+    if response.data and "items" in response.data:
+        trailer_info = response.data["items"][0]
+        video_id = trailer_info["id"]["videoId"]
+        return f"https://youtube.com/watch?v={video_id}"
+    return None
+
+# Run async functions
+asyncio.run(search_example())
+```
+
+API Key Requirements:
+- A Google Cloud project with YouTube Data API v3 enabled
+- An API key with YouTube Data API access
+- Sufficient quota (each search request uses ~100 units)
+
+For more information on the YouTube API, see:
+https://developers.google.com/youtube/v3/docs
+"""
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 from ...core.client import BaseAPIClient, APIResponse
