@@ -230,13 +230,32 @@ class OpenAIClient:
 _openai_client = None
 
 
-def get_openai_client() -> OpenAIClient:
-    """Get a singleton instance of the OpenAI client.
+def get_openai_client(demo_mode: bool = False) -> Optional[OpenAIClient]:
+    """Get the OpenAI client singleton.
 
     Returns:
-        OpenAIClient: The OpenAI client instance.
+        OpenAIClient: The OpenAI client singleton
     """
     global _openai_client
-    if _openai_client is None:
+
+    # Return existing client if available
+    if _openai_client is not None:
+        return _openai_client
+
+    # In demo mode, we return None instead of raising an error
+    if demo_mode:
+        logger.warning("Demo mode: Using dummy OpenAI client")
+        return None
+
+    # Create new client
+    try:
         _openai_client = OpenAIClient()
-    return _openai_client
+        return _openai_client
+    except ConfigError as e:
+        # If demo mode is enabled, just log the error and return None
+        if demo_mode:
+            logger.warning(f"Running in demo mode without OpenAI API key: {str(e)}")
+            return None
+        else:
+            # Re-raise the error in normal mode
+            raise
