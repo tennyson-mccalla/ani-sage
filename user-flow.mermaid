@@ -1,0 +1,55 @@
+flowchart TD
+    Start([User Enters Site]) --> A{First Visit?}
+    A -->|Yes| B[Introduction Screen]
+    A -->|No| C[Welcome Back Screen]
+    
+    B --> D[Initial Question Set]
+    C --> E[Resume Experience]
+    
+    D --> F[Process Initial Responses]
+    E --> G[Retrieve Profile from MCP]
+    
+    F --> H[Create Basic Profile]
+    G --> I[Check Profile Confidence]
+    
+    H --> J[Store in MCP]
+    I -->|Low Confidence| K[Present Refinement Questions]
+    I -->|High Confidence| L[Present Visual Elements]
+    
+    J --> L
+    K --> M[Update Psychological Profile]
+    L --> M
+    
+    M --> N[Generate Initial Recommendations]
+    N --> O[Present Visual Samples]
+    
+    O --> P{User Engaged?}
+    P -->|Yes| Q[Present More Specific Questions]
+    P -->|No| R[Offer Different Question Type]
+    
+    Q --> S[Update Profile with New Data]
+    R --> S
+    
+    S --> T[Generate Final Recommendations]
+    T --> U[Present Results with Explanations]
+    
+    U --> V{User Selects Anime?}
+    V -->|Yes| W[Record Selection in MCP]
+    V -->|No| X[Offer Refinement Options]
+    
+    W --> Y[Provide Detailed Information]
+    X --> Z[Present Alternative Questions]
+    
+    Y --> End([Session Complete])
+    Z --> S
+    
+    classDef entry fill:#d3f7c9,stroke:#333,stroke-width:2px;
+    classDef exit fill:#ffd9d9,stroke:#333,stroke-width:2px;
+    classDef process fill:#e8f7ff,stroke:#333,stroke-width:1px;
+    classDef decision fill:#fff1d6,stroke:#333,stroke-width:1px;
+    classDef mcp fill:#f2e6ff,stroke:#333,stroke-width:1px;
+    
+    class Start,End entry;
+    class B,C,D,E,L,O,Q,R,U,Y,Z process;
+    class A,P,V,I decision;
+    class J,G,H,M,S,W,T mcp;

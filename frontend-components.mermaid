@@ -1,0 +1,100 @@
+graph TD
+    subgraph App
+        AppComponent[App Component]
+        Router[Router]
+        
+        AppComponent --> Router
+        Router --> HomePage
+        Router --> QuestionFlowPage
+        Router --> ResultsPage
+        Router --> DetailPage
+    end
+    
+    subgraph Core
+        ApiService[API Service]
+        ProfileService[Profile Service]
+        McpService[MCP Service]
+        StorageService[Storage Service]
+        
+        subgraph States
+            ProfileState[Profile State]
+            QuestionState[Question State]
+            RecommendationState[Recommendation State]
+        end
+    end
+    
+    subgraph Pages
+        HomePage[Home Page]
+        QuestionFlowPage[Question Flow Page]
+        ResultsPage[Results Page]
+        DetailPage[Anime Detail Page]
+    end
+    
+    subgraph Components
+        subgraph QuestionComponents
+            TextQuestionComponent[Text Question]
+            ImageQuestionComponent[Image Question]
+            ColorQuestionComponent[Color Question]
+            ScenarioQuestionComponent[Scenario Question]
+            PreferenceQuestionComponent[Preference Question]
+            QuestionFactory[Question Factory]
+            
+            QuestionFactory --> TextQuestionComponent
+            QuestionFactory --> ImageQuestionComponent
+            QuestionFactory --> ColorQuestionComponent
+            QuestionFactory --> ScenarioQuestionComponent
+            QuestionFactory --> PreferenceQuestionComponent
+        end
+        
+        subgraph VisualizationComponents
+            AnimeCardComponent[Anime Card]
+            AnimeGridComponent[Anime Grid]
+            AnimeDetailComponent[Anime Detail]
+            TrailerPlayerComponent[Trailer Player]
+            MatchReasonComponent[Match Reason]
+            
+            AnimeGridComponent --> AnimeCardComponent
+            AnimeDetailComponent --> TrailerPlayerComponent
+            AnimeDetailComponent --> MatchReasonComponent
+        end
+        
+        subgraph UIComponents
+            LoaderComponent[Loader]
+            ProgressIndicatorComponent[Progress Indicator]
+            FeedbackFormComponent[Feedback Form]
+            ModalComponent[Modal]
+            ToastComponent[Toast]
+        end
+    end
+    
+    HomePage --> QuestionFactory
+    QuestionFlowPage --> QuestionFactory
+    QuestionFlowPage --> ProgressIndicatorComponent
+    ResultsPage --> AnimeGridComponent
+    DetailPage --> AnimeDetailComponent
+    DetailPage --> FeedbackFormComponent
+    
+    QuestionFactory --> ApiService
+    QuestionFactory --> ProfileState
+    QuestionFactory --> QuestionState
+    
+    AnimeGridComponent --> ApiService
+    AnimeGridComponent --> RecommendationState
+    
+    AnimeDetailComponent --> ApiService
+    AnimeDetailComponent --> McpService
+    
+    ApiService --> McpService
+    ApiService --> StorageService
+    ProfileService --> McpService
+    ProfileService --> ProfileState
+    
+    classDef page fill:#f9d5e5,stroke:#333,stroke-width:1px;
+    classDef component fill:#eeeeee,stroke:#333,stroke-width:1px;
+    classDef service fill:#b5ead7,stroke:#333,stroke-width:1px;
+    classDef state fill:#c7ceea,stroke:#333,stroke-width:1px;
+    
+    class HomePage,QuestionFlowPage,ResultsPage,DetailPage page;
+    class TextQuestionComponent,ImageQuestionComponent,ColorQuestionComponent,ScenarioQuestionComponent,PreferenceQuestionComponent,AnimeCardComponent,AnimeGridComponent,AnimeDetailComponent,TrailerPlayerComponent,MatchReasonComponent,LoaderComponent,ProgressIndicatorComponent,FeedbackFormComponent,ModalComponent,ToastComponent,QuestionFactory component;
+    class ApiService,ProfileService,McpService,StorageService service;
+    class ProfileState,QuestionState,RecommendationState state;

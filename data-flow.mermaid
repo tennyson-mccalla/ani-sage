@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant User
+    participant UI as User Interface
+    participant QE as Question Engine
+    participant PE as Psychological Engine
+    participant MCP as Model Context Protocol
+    participant RE as Recommendation Engine
+    participant APIs as External APIs
+    
+    User->>UI: Initiates interaction
+    
+    UI->>QE: Request initial questions
+    QE->>UI: Provide psychological questions
+    
+    User->>UI: Answers questions
+    UI->>PE: Send responses
+    
+    PE->>MCP: Update user psychological profile
+    MCP-->>PE: Confirm profile update
+    
+    PE->>QE: Request next questions based on profile
+    QE->>UI: Provide next set of questions
+    
+    User->>UI: Answers more questions
+    UI->>PE: Send additional responses
+    
+    PE->>MCP: Update refined profile
+    
+    PE->>RE: Request recommendations
+    RE->>APIs: Fetch anime metadata
+    APIs-->>RE: Return anime data
+    
+    RE->>RE: Filter & rank based on profile
+    RE->>UI: Return top recommendations
+    
+    UI->>User: Display personalized anime recommendations
+    
+    User->>UI: Select anime or request more
+    UI->>MCP: Update selection history
+    UI->>RE: Request similar titles
+    RE->>UI: Return similar recommendations

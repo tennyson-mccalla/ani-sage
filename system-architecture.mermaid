@@ -1,0 +1,57 @@
+flowchart TD
+    subgraph User_Interface
+        UI_Questions[Interactive Questions]
+        UI_Visuals[Visual Elements]
+        UI_Results[Recommendation Results]
+    end
+    
+    subgraph Core_Engine
+        PE[Psychological Engine]
+        RM[Recommendation Matcher]
+        CF[Clustering & Filtering]
+        PS[Profile Store]
+    end
+    
+    subgraph External_APIs
+        MAL[MyAnimeList API]
+        AL[AniList API]
+        TMDb[TMDb API]
+        YT[YouTube API]
+    end
+    
+    subgraph Data_Layer
+        AnimeDB[(Anime Database)]
+        UserProfiles[(User Profiles)]
+        AnimeVectors[(Anime Attribute Vectors)]
+        QuestionBank[(Question Bank)]
+    end
+    
+    User --> UI_Questions
+    UI_Questions --> PE
+    UI_Visuals --> PE
+    
+    PE --> PS
+    PS --> UserProfiles
+    PS --> RM
+    
+    RM --> CF
+    CF --> UI_Results
+    
+    CF --> AnimeDB
+    AnimeDB <--> MAL
+    AnimeDB <--> AL
+    
+    UI_Results --> YT
+    UI_Results --> TMDb
+    
+    AnimeVectors <--> CF
+    QuestionBank <--> PE
+    
+    %% MCP Integration
+    subgraph MCP_Protocol
+        Context[Contextual Memory]
+        ProfileSync[Profile Synchronization]
+    end
+    
+    PS <--> Context
+    UserProfiles <--> ProfileSync

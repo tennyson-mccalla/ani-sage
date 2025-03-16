@@ -1,0 +1,107 @@
+erDiagram
+    USERS {
+        string id PK
+        string sessionToken
+        datetime createdAt
+        datetime lastActive
+        integer interactionCount
+        boolean onboarded
+    }
+    
+    USER_PROFILES {
+        string userId PK, FK
+        json dimensions
+        json confidences
+        string[] answeredQuestions
+        datetime lastUpdated
+        integer profileVersion
+    }
+    
+    PROFILE_HISTORY {
+        string id PK
+        string userId FK
+        datetime timestamp
+        json dimensions
+        integer interactionCount
+    }
+    
+    QUESTION_BANK {
+        string id PK
+        string type
+        string text
+        string description
+        string imageUrl
+        json options
+        string[] targetDimensions
+        json prerequisiteScore
+        integer stage
+        boolean active
+    }
+    
+    QUESTION_OPTIONS {
+        string id PK
+        string questionId FK
+        string text
+        string imageUrl
+        json dimensionMappings
+    }
+    
+    ANIME_TITLES {
+        string id PK
+        string title
+        string[] alternativeTitles
+        string synopsis
+        string[] genres
+        integer year
+        string season
+        integer episodeCount
+        float rating
+        integer popularity
+        json imageUrls
+        json externalIds
+        string source
+        datetime lastUpdated
+    }
+    
+    ANIME_ATTRIBUTES {
+        string animeId PK, FK
+        json attributes
+        string cluster
+        json vectors
+        datetime lastCalculated
+    }
+    
+    USER_INTERACTIONS {
+        string id PK
+        string userId FK
+        string itemId
+        string itemType
+        string interactionType
+        datetime timestamp
+        json details
+    }
+    
+    RECOMMENDATIONS {
+        string id PK
+        string userId FK
+        datetime timestamp
+        json recommendations
+        json profileSnapshot
+    }
+    
+    API_CACHE {
+        string cacheKey PK
+        string apiSource
+        json response
+        datetime timestamp
+        integer ttl
+    }
+    
+    USERS ||--o{ USER_PROFILES : "has"
+    USERS ||--o{ PROFILE_HISTORY : "tracks"
+    USERS ||--o{ USER_INTERACTIONS : "performs"
+    USERS ||--o{ RECOMMENDATIONS : "receives"
+    
+    QUESTION_BANK ||--o{ QUESTION_OPTIONS : "contains"
+    
+    ANIME_TITLES ||--|| ANIME_ATTRIBUTES : "has"

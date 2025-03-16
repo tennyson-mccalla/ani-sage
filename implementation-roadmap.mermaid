@@ -1,0 +1,44 @@
+gantt
+    title Anime Recommendation System Implementation Roadmap
+    dateFormat  YYYY-MM-DD
+    
+    section Foundation
+    Project setup & architecture             :a1, 2025-03-20, 7d
+    Core data models                         :a2, after a1, 5d
+    Database schema implementation           :a3, after a2, 4d
+    MCP integration scaffolding              :a4, after a1, 6d
+    
+    section Question Engine
+    Question bank development                :b1, after a3, 10d
+    Psychological mapping framework          :b2, after a4, 7d
+    Question selection algorithm             :b3, after b1, 5d
+    Profile update mechanism                 :b4, after b2, 6d
+    
+    section API Integration
+    External API client implementation       :c1, after a3, 8d
+    API response normalization               :c2, after c1, 5d
+    Caching mechanism                        :c3, after c2, 3d
+    Rate limit handling                      :c4, after c2, 4d
+    
+    section Recommendation Engine
+    Initial filtering algorithm              :d1, after b4, 7d
+    Clustering implementation                :d2, after d1, 6d
+    Detailed scoring system                  :d3, after d2, 5d
+    Result diversification                   :d4, after d3, 4d
+    
+    section Frontend
+    Core UI components                       :e1, after a4, 10d
+    Question presentation flow               :e2, after e1, 8d
+    Result visualization                     :e3, after e2, 7d
+    User interaction tracking                :e4, after e3, 5d
+    
+    section Integration & Testing
+    Component integration                    :f1, after d4 e4, 10d
+    MVP user testing                         :f2, after f1, 7d
+    Feedback incorporation                   :f3, after f2, 8d
+    Performance optimization                 :f4, after f3, 6d
+    
+    section Launch
+    Final testing & QA                       :g1, after f4, 5d
+    Documentation                            :g2, after g1, 4d
+    MVP release                              :milestone, g3, after g2, 0d

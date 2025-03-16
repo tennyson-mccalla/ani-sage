@@ -1,0 +1,621 @@
+name: github
+description: Provides extensive access to GitHub repository data and operations
+version: 1.0.0
+capabilities:
+  - name: create_or_update_file
+    description: Create or update a single file in a repository
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner (username or organization)
+      - name: repo
+        type: string
+        description: Repository name
+      - name: path
+        type: string
+        description: Path where to create/update the file
+      - name: content
+        type: string
+        description: Content of the file
+      - name: message
+        type: string
+        description: Commit message
+      - name: branch
+        type: string
+        description: Branch to create/update the file in
+      - name: sha
+        type: string
+        description: SHA of file being replaced (for updates)
+        optional: true
+    returns:
+      type: object
+
+  - name: push_files
+    description: Push multiple files in a single commit
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: branch
+        type: string
+        description: Branch to push to
+      - name: files
+        type: array
+        description: Files to push, each with path and content
+      - name: message
+        type: string
+        description: Commit message
+    returns:
+      type: object
+
+  - name: search_repositories
+    description: Search for GitHub repositories
+    parameters:
+      - name: query
+        type: string
+        description: Search query
+      - name: page
+        type: number
+        description: Page number for pagination
+        optional: true
+      - name: perPage
+        type: number
+        description: Results per page (max 100)
+        optional: true
+    returns:
+      type: object
+
+  - name: create_repository
+    description: Create a new GitHub repository
+    parameters:
+      - name: name
+        type: string
+        description: Repository name
+      - name: description
+        type: string
+        description: Repository description
+        optional: true
+      - name: private
+        type: boolean
+        description: Whether repo should be private
+        optional: true
+      - name: autoInit
+        type: boolean
+        description: Initialize with README
+        optional: true
+    returns:
+      type: object
+
+  - name: get_file_contents
+    description: Get contents of a file or directory
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: path
+        type: string
+        description: Path to file/directory
+      - name: branch
+        type: string
+        description: Branch to get contents from
+        optional: true
+    returns:
+      type: object
+
+  - name: create_issue
+    description: Create a new issue
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: title
+        type: string
+        description: Issue title
+      - name: body
+        type: string
+        description: Issue description
+        optional: true
+      - name: assignees
+        type: array
+        description: Usernames to assign
+        optional: true
+      - name: labels
+        type: array
+        description: Labels to add
+        optional: true
+      - name: milestone
+        type: number
+        description: Milestone number
+        optional: true
+    returns:
+      type: object
+
+  - name: create_pull_request
+    description: Create a new pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: title
+        type: string
+        description: PR title
+      - name: body
+        type: string
+        description: PR description
+        optional: true
+      - name: head
+        type: string
+        description: Branch containing changes
+      - name: base
+        type: string
+        description: Branch to merge into
+      - name: draft
+        type: boolean
+        description: Create as draft PR
+        optional: true
+      - name: maintainer_can_modify
+        type: boolean
+        description: Allow maintainer edits
+        optional: true
+    returns:
+      type: object
+
+  - name: fork_repository
+    description: Fork a repository
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: organization
+        type: string
+        description: Organization to fork to
+        optional: true
+    returns:
+      type: object
+
+  - name: create_branch
+    description: Create a new branch
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: branch
+        type: string
+        description: Name for new branch
+      - name: from_branch
+        type: string
+        description: Source branch (defaults to repo default)
+        optional: true
+    returns:
+      type: object
+
+  - name: list_issues
+    description: List and filter repository issues
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: state
+        type: string
+        description: Filter by state ('open', 'closed', 'all')
+        optional: true
+      - name: labels
+        type: array
+        description: Filter by labels
+        optional: true
+      - name: sort
+        type: string
+        description: Sort by ('created', 'updated', 'comments')
+        optional: true
+      - name: direction
+        type: string
+        description: Sort direction ('asc', 'desc')
+        optional: true
+      - name: since
+        type: string
+        description: Filter by date (ISO 8601 timestamp)
+        optional: true
+      - name: page
+        type: number
+        description: Page number
+        optional: true
+      - name: per_page
+        type: number
+        description: Results per page
+        optional: true
+    returns:
+      type: array
+
+  - name: update_issue
+    description: Update an existing issue
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: issue_number
+        type: number
+        description: Issue number to update
+      - name: title
+        type: string
+        description: New title
+        optional: true
+      - name: body
+        type: string
+        description: New description
+        optional: true
+      - name: state
+        type: string
+        description: New state ('open' or 'closed')
+        optional: true
+      - name: labels
+        type: array
+        description: New labels
+        optional: true
+      - name: assignees
+        type: array
+        description: New assignees
+        optional: true
+      - name: milestone
+        type: number
+        description: New milestone number
+        optional: true
+    returns:
+      type: object
+
+  - name: add_issue_comment
+    description: Add a comment to an issue
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: issue_number
+        type: number
+        description: Issue number to comment on
+      - name: body
+        type: string
+        description: Comment text
+    returns:
+      type: object
+
+  - name: search_code
+    description: Search for code across GitHub repositories
+    parameters:
+      - name: q
+        type: string
+        description: Search query using GitHub code search syntax
+      - name: sort
+        type: string
+        description: Sort field ('indexed' only)
+        optional: true
+      - name: order
+        type: string
+        description: Sort order ('asc' or 'desc')
+        optional: true
+      - name: per_page
+        type: number
+        description: Results per page (max 100)
+        optional: true
+      - name: page
+        type: number
+        description: Page number
+        optional: true
+    returns:
+      type: object
+
+  - name: search_issues
+    description: Search for issues and pull requests
+    parameters:
+      - name: q
+        type: string
+        description: Search query using GitHub issues search syntax
+      - name: sort
+        type: string
+        description: Sort field (comments, reactions, created, etc.)
+        optional: true
+      - name: order
+        type: string
+        description: Sort order ('asc' or 'desc')
+        optional: true
+      - name: per_page
+        type: number
+        description: Results per page (max 100)
+        optional: true
+      - name: page
+        type: number
+        description: Page number
+        optional: true
+    returns:
+      type: object
+
+  - name: search_users
+    description: Search for GitHub users
+    parameters:
+      - name: q
+        type: string
+        description: Search query using GitHub users search syntax
+      - name: sort
+        type: string
+        description: Sort field (followers, repositories, joined)
+        optional: true
+      - name: order
+        type: string
+        description: Sort order ('asc' or 'desc')
+        optional: true
+      - name: per_page
+        type: number
+        description: Results per page (max 100)
+        optional: true
+      - name: page
+        type: number
+        description: Page number
+        optional: true
+    returns:
+      type: object
+
+  - name: list_commits
+    description: Gets commits of a branch in a repository
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: page
+        type: string
+        description: page number
+        optional: true
+      - name: per_page
+        type: string
+        description: number of record per page
+        optional: true
+      - name: sha
+        type: string
+        description: branch name
+        optional: true
+    returns:
+      type: array
+
+  - name: get_issue
+    description: Gets the contents of an issue within a repository
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: issue_number
+        type: number
+        description: Issue number to retrieve
+    returns:
+      type: object
+
+  - name: get_pull_request
+    description: Get details of a specific pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+    returns:
+      type: object
+
+  - name: list_pull_requests
+    description: List and filter repository pull requests
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: state
+        type: string
+        description: Filter by state ('open', 'closed', 'all')
+        optional: true
+      - name: head
+        type: string
+        description: Filter by head user/org and branch
+        optional: true
+      - name: base
+        type: string
+        description: Filter by base branch
+        optional: true
+      - name: sort
+        type: string
+        description: Sort by ('created', 'updated', 'popularity', 'long-running')
+        optional: true
+      - name: direction
+        type: string
+        description: Sort direction ('asc', 'desc')
+        optional: true
+      - name: per_page
+        type: number
+        description: Results per page (max 100)
+        optional: true
+      - name: page
+        type: number
+        description: Page number
+        optional: true
+    returns:
+      type: array
+
+  - name: create_pull_request_review
+    description: Create a review on a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+      - name: body
+        type: string
+        description: Review comment text
+      - name: event
+        type: string
+        description: Review action ('APPROVE', 'REQUEST_CHANGES', 'COMMENT')
+      - name: commit_id
+        type: string
+        description: SHA of commit to review
+        optional: true
+      - name: comments
+        type: array
+        description: Line-specific comments
+        optional: true
+    returns:
+      type: object
+
+  - name: merge_pull_request
+    description: Merge a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+      - name: commit_title
+        type: string
+        description: Title for merge commit
+        optional: true
+      - name: commit_message
+        type: string
+        description: Extra detail for merge commit
+        optional: true
+      - name: merge_method
+        type: string
+        description: Merge method ('merge', 'squash', 'rebase')
+        optional: true
+    returns:
+      type: object
+
+  - name: get_pull_request_files
+    description: Get the list of files changed in a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+    returns:
+      type: array
+
+  - name: get_pull_request_status
+    description: Get the combined status of all status checks for a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+    returns:
+      type: object
+
+  - name: update_pull_request_branch
+    description: Update a pull request branch with the latest changes from the base branch
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+      - name: expected_head_sha
+        type: string
+        description: The expected SHA of the pull request's HEAD ref
+        optional: true
+    returns:
+      type: object
+
+  - name: get_pull_request_comments
+    description: Get the review comments on a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+    returns:
+      type: array
+
+  - name: get_pull_request_reviews
+    description: Get the reviews on a pull request
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+      - name: pull_number
+        type: number
+        description: Pull request number
+    returns:
+      type: array
+
+  - name: get_repository
+    description: Get information about a repository
+    parameters:
+      - name: owner
+        type: string
+        description: Repository owner
+      - name: repo
+        type: string
+        description: Repository name
+    returns:
+      type: object
