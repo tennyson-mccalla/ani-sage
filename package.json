@@ -1,5 +1,26 @@
 {
+  "name": "ani-sage",
+  "version": "0.1.0",
+  "description": "Psychological anime recommendation system",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "demo": "ts-node api-integration-demo.ts",
+    "api-demo": "ts-node api/demo.ts",
+    "recommendation-demo": "ts-node recommendation-demo.ts"
+  },
   "dependencies": {
-    "@modelcontextprotocol/server-github": "^2025.1.23"
+    "@modelcontextprotocol/server-github": "^2025.1.23",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.20",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

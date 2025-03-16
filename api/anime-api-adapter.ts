@@ -487,15 +487,21 @@ export class AnimeApiAdapter {
       // Get detailed information for top matches
       const detailedResults = await Promise.all(
         response.data.results.slice(0, limit).map(async result => {
+          // Make sure tmdb is defined
+          if (!this.tmdb) return null;
+          
           const detailsResponse = await this.tmdb.getTVDetails(result.id);
           if (!detailsResponse.data) return null;
           const animeData = this.convertTMDbShow(detailsResponse.data);
           
           // Try to get trailer
           try {
-            const trailerUrl = await this.tmdb.getTrailerUrl(result.id);
-            if (trailerUrl) {
-              animeData.trailer = trailerUrl;
+            // Extra null check for TypeScript
+            if (this.tmdb) {
+              const trailerUrl = await this.tmdb.getTrailerUrl(result.id);
+              if (trailerUrl) {
+                animeData.trailer = trailerUrl;
+              }
             }
           } catch (error) {
             // Continue without trailer
@@ -512,6 +518,256 @@ export class AnimeApiAdapter {
     return [];
   }
 
+  /**
+   * Get popular anime with pagination
+   * 
+   * @param limit Maximum number of anime to return
+   * @param page Page number for pagination
+   * @returns Array of popular anime
+   */
+  public async getPopularAnime(limit: number = 50, page: number = 1): Promise<AnimeTitle[]> {
+    try {
+      switch (this.defaultProvider) {
+        case ApiProvider.ANILIST:
+          if (this.anilist) {
+            const response = await this.anilist.getPopularAnime(limit, page);
+            return response.data.map(anime => this.mapAniListToAnime(anime));
+          }
+          break;
+          
+        case ApiProvider.MAL:
+          if (this.mal) {
+            const response = await this.mal.getSeasonalAnime(
+              new Date().getFullYear(), 
+              this.getCurrentSeason(),
+              'popularity',
+              limit
+            );
+            return response.data.map(anime => this.mapMALToAnime(anime));
+          }
+          break;
+      }
+      
+      // Fallback to secondary provider
+      for (const provider of Object.values(ApiProvider)) {
+        if (provider === this.defaultProvider) continue;
+        
+        if (provider === ApiProvider.ANILIST && this.anilist) {
+          const response = await this.anilist.getPopularAnime(limit, page);
+          return response.data.map(anime => this.mapAniListToAnime(anime));
+        }
+        
+        if (provider === ApiProvider.MAL && this.mal) {
+          const response = await this.mal.getSeasonalAnime(
+            new Date().getFullYear(), 
+            this.getCurrentSeason(),
+            'popularity',
+            limit
+          );
+          return response.data.map(anime => this.mapMALToAnime(anime));
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error getting popular anime:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Get top rated anime with pagination
+   * 
+   * @param limit Maximum number of anime to return
+   * @param page Page number for pagination
+   * @returns Array of top rated anime
+   */
+  public async getTopRatedAnime(limit: number = 50, page: number = 1): Promise<AnimeTitle[]> {
+    try {
+      switch (this.defaultProvider) {
+        case ApiProvider.ANILIST:
+          if (this.anilist) {
+            const response = await this.anilist.getTopAnime(limit, page);
+            return response.data.map(anime => this.mapAniListToAnime(anime));
+          }
+          break;
+          
+        case ApiProvider.MAL:
+          if (this.mal) {
+            const response = await this.mal.getSeasonalAnime(
+              new Date().getFullYear(), 
+              this.getCurrentSeason(),
+              'anime_score',
+              limit
+            );
+            return response.data.map(anime => this.mapMALToAnime(anime));
+          }
+          break;
+      }
+      
+      // Fallback to secondary provider
+      for (const provider of Object.values(ApiProvider)) {
+        if (provider === this.defaultProvider) continue;
+        
+        if (provider === ApiProvider.ANILIST && this.anilist) {
+          const response = await this.anilist.getTopAnime(limit, page);
+          return response.data.map(anime => this.mapAniListToAnime(anime));
+        }
+        
+        if (provider === ApiProvider.MAL && this.mal) {
+          const response = await this.mal.getSeasonalAnime(
+            new Date().getFullYear(), 
+            this.getCurrentSeason(),
+            'anime_score',
+            limit
+          );
+          return response.data.map(anime => this.mapMALToAnime(anime));
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error getting top rated anime:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Infer psychological attributes for an anime based on metadata
+   * 
+   * @param anime Anime title to infer attributes for
+   * @returns Inferred psychological attributes
+   */
+  public inferAnimeAttributes(anime: AnimeTitle): { [dimension: string]: number } {
+    const attributes: { [dimension: string]: number } = {};
+    
+    // Default middle values
+    attributes.visualComplexity = 5;
+    attributes.narrativeComplexity = 5;
+    attributes.emotionalIntensity = 5;
+    attributes.characterComplexity = 5;
+    attributes.moralAmbiguity = 5;
+    attributes.emotionalValence = 0;
+    attributes.intellectualEmotional = 0;
+    
+    // Infer from genres
+    if (anime.genres.includes('Slice of Life')) {
+      attributes.visualComplexity = 4;
+      attributes.narrativeComplexity = 3;
+      attributes.emotionalIntensity = 4;
+      attributes.emotionalValence = 2;
+    }
+    
+    if (anime.genres.includes('Action')) {
+      attributes.visualComplexity = 7;
+      attributes.visualPace = 8;
+      attributes.emotionalIntensity = 7;
+    }
+    
+    if (anime.genres.includes('Mystery') || anime.genres.includes('Thriller')) {
+      attributes.narrativeComplexity = 8;
+      attributes.plotPredictability = 3;
+      attributes.emotionalIntensity = 7;
+    }
+    
+    if (anime.genres.includes('Psychological')) {
+      attributes.narrativeComplexity = 8;
+      attributes.characterComplexity = 8;
+      attributes.moralAmbiguity = 8;
+      attributes.intellectualEmotional = 3;
+    }
+    
+    if (anime.genres.includes('Comedy')) {
+      attributes.emotionalValence = 3;
+    }
+    
+    if (anime.genres.includes('Horror')) {
+      attributes.emotionalValence = -4;
+      attributes.emotionalIntensity = 8;
+    }
+    
+    if (anime.genres.includes('Drama')) {
+      attributes.characterComplexity = 7;
+      attributes.emotionalIntensity = 7;
+    }
+    
+    if (anime.genres.includes('Romance')) {
+      attributes.characterComplexity = 6;
+      attributes.emotionalIntensity = 6;
+      attributes.emotionalValence = 2;
+    }
+    
+    // Episode count can hint at narrative complexity
+    if (anime.episodeCount > 50) {
+      attributes.narrativeComplexity = Math.min(10, attributes.narrativeComplexity + 1);
+    } else if (anime.episodeCount <= 13) {
+      attributes.narrativeComplexity = Math.max(1, attributes.narrativeComplexity - 1);
+    }
+    
+    // Rating can hint at quality/complexity
+    if (anime.rating > 8.5) {
+      attributes.narrativeComplexity = Math.min(10, attributes.narrativeComplexity + 1);
+      attributes.characterComplexity = Math.min(10, attributes.characterComplexity + 1);
+    }
+    
+    return attributes;
+  }
+
+  /**
+   * Get the current anime season as a string
+   */
+  private getCurrentSeason(): string {
+    const month = new Date().getMonth();
+    
+    if (month >= 0 && month <= 2) return 'winter';
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    return 'fall';
+  }
+  
+  /**
+   * Enrich an anime with trailer information
+   * 
+   * @param anime Anime to enrich
+   * @returns Same anime with trailer information added
+   */
+  public async enrichWithTrailer(anime: AnimeTitle): Promise<AnimeTitle> {
+    if (anime.externalIds?.youtubeTrailerId) {
+      return anime;
+    }
+    
+    try {
+      const trailerUrl = await this.getAnimeTrailer(anime.title);
+      
+      if (trailerUrl) {
+        const videoId = this.extractYouTubeId(trailerUrl);
+        
+        return {
+          ...anime,
+          externalIds: {
+            ...anime.externalIds,
+            youtubeTrailerId: videoId
+          }
+        };
+      }
+    } catch (error) {
+      console.error(`Error enriching anime ${anime.id} with trailer:`, error);
+    }
+    
+    return anime;
+  }
+  
+  /**
+   * Extract YouTube video ID from a URL
+   * 
+   * @param url YouTube URL
+   * @returns Video ID or null if not found
+   */
+  private extractYouTubeId(url: string): string | null {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+  }
+  
   /**
    * Search for an anime trailer on YouTube
    * 
