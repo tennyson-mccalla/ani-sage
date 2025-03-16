@@ -1,0 +1,175 @@
+/**
+ * YouTube API client implementation.
+ *
+ * This module provides a client for the YouTube Data API v3, primarily used to
+ * search for anime trailers and retrieve video information. It requires a valid
+ * YouTube API key with quota available.
+ */
+
+import { BaseAPIClient, APIResponse } from '../../core/client';
+
+// YouTube Models
+export interface VideoThumbnail {
+  url: string;
+  width: number;
+  height: number;
+}
+
+export interface VideoSnippet {
+  title: string;
+  description: string;
+  publishedAt: string;
+  channelId: string;
+  channelTitle: string;
+  thumbnails: Record<string, VideoThumbnail>;
+}
+
+export interface VideoId {
+  kind: string;
+  videoId: string;
+}
+
+export interface Video {
+  id: VideoId | string;
+  snippet: VideoSnippet;
+  statistics?: Record<string, any>;
+}
+
+/**
+ * YouTube Data API client implementation
+ */
+export class YouTubeClient extends BaseAPIClient {
+  private apiKey: string;
+
+  /**
+   * Initialize YouTube client with API key
+   * 
+   * @param apiKey YouTube Data API key
+   * @param options Client configuration options
+   */
+  constructor(
+    apiKey: string,
+    options?: {
+      enableCache?: boolean;
+      enableRateLimit?: boolean;
+      maxRetries?: number;
+    }
+  ) {
+    super('https://www.googleapis.com/youtube/v3', options);
+    this.apiKey = apiKey;
+  }
+
+  /**
+   * Handle YouTube API response and check for quota errors
+   * 
+   * @param response API response to check
+   * @throws Error if quota is exceeded
+   */
+  private handleResponse<T>(response: APIResponse<T>): APIResponse<T> {
+    if (response.statusCode === 403) {
+      // Check for quota exceeded message
+      const errorData = response.data as any;
+      if (errorData?.error?.errors?.some((e: any) => e.reason === 'quotaExceeded')) {
+        throw new Error('YouTube API quota exceeded');
+      }
+    }
+    return response;
+  }
+
+  /**
+   * Search for videos on YouTube
+   * 
+   * @param query Search query string
+   * @param maxResults Maximum number of results (default 10, max 50)
+   * @param type Type of results (default 'video')
+   * @param part Parts to include in response (default 'snippet')
+   * @returns API response with search results
+   */
+  public async searchVideos(
+    query: string,
+    maxResults: number = 10,
+    type: string = 'video',
+    part: string = 'snippet'
+  ): Promise<APIResponse<Video[]>> {
+    if (!query) {
+      throw new Error('Search query cannot be empty');
+    }
+
+    const params = {
+      q: query,
+      maxResults: Math.min(maxResults, 50), // YouTube maximum
+      type,
+      part,
+      key: this.apiKey
+    };
+
+    const response = await this.request<{items: any[]}>({
+      method: 'GET',
+      endpoint: 'search',
+      params
+    });
+
+    const processedResponse = this.handleResponse(response);
+
+    // Transform the response
+    if (processedResponse.data && processedResponse.data.items) {
+      processedResponse.data = processedResponse.data.items.map(item => ({
+        id: item.id,
+        snippet: item.snippet
+      }));
+    }
+
+    return processedResponse as APIResponse<Video[]>;
+  }
+
+  /**
+   * Search for anime trailers on YouTube
+   * 
+   * @param animeTitle Anime title to search for
+   * @param maxResults Maximum number of results (default 5)
+   * @returns API response with search results
+   */
+  public async searchAnimeTrailer(
+    animeTitle: string,
+    maxResults: number = 5
+  ): Promise<APIResponse<Video[]>> {
+    if (!animeTitle) {
+      throw new Error('Anime title cannot be empty');
+    }
+
+    // Craft a search query optimized for finding official trailers
+    const query = `${animeTitle} official trailer anime`;
+
+    return this.searchVideos(query, maxResults);
+  }
+
+  /**
+   * Get detailed information about a specific video
+   * 
+   * @param videoId YouTube video ID
+   * @param part Parts to include in response (default 'snippet,statistics')
+   * @returns API response with video details
+   */
+  public async getVideoDetails(
+    videoId: string,
+    part: string = 'snippet,statistics'
+  ): Promise<APIResponse<any>> {
+    if (!videoId) {
+      throw new Error('Video ID cannot be empty');
+    }
+
+    const params = {
+      id: videoId,
+      part,
+      key: this.apiKey
+    };
+
+    const response = await this.request({
+      method: 'GET',
+      endpoint: 'videos',
+      params
+    });
+
+    return this.handleResponse(response);
+  }
+}
