@@ -1,3 +1,8 @@
+/**
+ * DEPRECATED: This file contains the original JavaScript conceptual implementation. 
+ * See recommendation-engine.ts for the current TypeScript implementation.
+ */
+
 // Conceptual implementation of the psychological profile-based recommendation system
 
 // Define the psychological dimensions we track

@@ -1,3 +1,4 @@
+import { expect, describe, test, beforeEach } from '@jest/globals';
 import type { Question, UserProfile } from './data-models';
 import { createInitialProfile } from './psychological-dimensions';
 import { updateProfileFromQuestion, updateProfileFromAnimeFeedback, generateProfileAdjustments } from './profile-update';
