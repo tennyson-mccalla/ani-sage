@@ -325,7 +325,7 @@ export class TMDbClient extends BaseAPIClient {
       language: this.language,
       page: page.toString(),
       with_original_language: 'ja', // Filter for Japanese shows to increase anime likelihood
-      air_date.gte: new Date().toISOString().split('T')[0], // Current date
+      'air_date.gte': new Date().toISOString().split('T')[0], // Current date
       sort_by: 'popularity.desc'
     };
 

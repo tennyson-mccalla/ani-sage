@@ -153,12 +153,17 @@ export class MALClient extends BaseAPIClient {
       headers: this.getHeaders()
     });
 
-    // Transform the response
+    // Transform the response to extract just the anime details
+    let animeList: AnimeDetails[] = [];
     if (response.data && response.data.data) {
-      response.data = response.data.data.map(item => item.node);
+      animeList = response.data.data.map(item => item.node);
     }
 
-    return response as APIResponse<AnimeDetails[]>;
+    // Create a new response with the correct type
+    return {
+      ...response,
+      data: animeList
+    };
   }
 
   /**
@@ -330,12 +335,17 @@ export class MALClient extends BaseAPIClient {
       headers: this.getHeaders()
     });
 
-    // Transform the response
+    // Transform the response to extract just the anime details
+    let animeList: AnimeDetails[] = [];
     if (response.data && response.data.data) {
-      response.data = response.data.data.map(item => item.node);
+      animeList = response.data.data.map(item => item.node);
     }
 
-    return response as APIResponse<AnimeDetails[]>;
+    // Create a new response with the correct type
+    return {
+      ...response,
+      data: animeList
+    };
   }
 
   /**

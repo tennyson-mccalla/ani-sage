@@ -111,15 +111,20 @@ export class YouTubeClient extends BaseAPIClient {
 
     const processedResponse = this.handleResponse(response);
 
-    // Transform the response
+    // Transform the response to extract videos
+    let videos: Video[] = [];
     if (processedResponse.data && processedResponse.data.items) {
-      processedResponse.data = processedResponse.data.items.map(item => ({
+      videos = processedResponse.data.items.map(item => ({
         id: item.id,
         snippet: item.snippet
       }));
     }
 
-    return processedResponse as APIResponse<Video[]>;
+    // Return a new response object with the correct type
+    return {
+      ...processedResponse,
+      data: videos
+    };
   }
 
   /**
