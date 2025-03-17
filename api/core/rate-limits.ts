@@ -26,42 +26,44 @@ export interface RateLimitConfig {
 /**
  * Rate limits by API provider
  * 
- * These values are based on the official documentation for each API
+ * These values are based on confirmed rate limits from API providers
  */
 export const API_RATE_LIMITS: Record<string, RateLimitConfig> = {
   // YouTube Data API v3
-  // https://developers.google.com/youtube/v3/getting-started#quota
+  // 10,000 quota units per day
+  // Different operations cost different quota amounts, with
+  // most search operations costing 100 units each
   'youtube': {
-    requestsPerWindow: 100, // Daily quota is much higher (10,000), but we'll limit for safety
+    requestsPerWindow: 50, // Conservative limit to avoid hitting daily quota too quickly
     windowMs: 60 * 1000, // 1 minute
     resetBehavior: 'sliding',
-    errorMessage: 'YouTube API rate limit exceeded. The API has a daily quota, please try again later.'
+    errorMessage: 'YouTube API rate limit exceeded. The API has a daily quota of 10,000 units, please try again later.'
   },
   
   // TMDb API
-  // https://developer.themoviedb.org/docs/rate-limiting
+  // ~50 requests per second stated upper limit
   'tmdb': {
-    requestsPerWindow: 40,
-    windowMs: 10 * 1000, // 10 seconds
-    resetBehavior: 'fixed',
+    requestsPerWindow: 40, // Slightly conservative from their 50/sec limit
+    windowMs: 1 * 1000, // 1 second
+    resetBehavior: 'sliding', // Use sliding window for smoother distribution
     errorMessage: 'TMDb API rate limit exceeded. Please wait before making more requests.'
   },
   
   // AniList API
-  // https://anilist.gitbook.io/anilist-apiv2-docs/overview/rate-limiting
+  // Currently limited to 30 requests per minute
   'anilist': {
-    requestsPerWindow: 90,
+    requestsPerWindow: 30,
     windowMs: 60 * 1000, // 1 minute
     resetBehavior: 'fixed',
-    errorMessage: 'AniList API rate limit exceeded. Please wait before making more requests.'
+    errorMessage: 'AniList API is currently in a degraded state and limited to 30 requests per minute. Please wait before making more requests.'
   },
   
   // MyAnimeList API
-  // Documented at 600 requests/minute for registered apps
+  // 1 request per 2 seconds with potential cooldowns up to 5 minutes
   'mal': {
-    requestsPerWindow: 30, // Conservative limit to prevent issues
-    windowMs: 5 * 1000, // 5 seconds
-    resetBehavior: 'sliding',
+    requestsPerWindow: 1,
+    windowMs: 2 * 1000, // 2 seconds
+    resetBehavior: 'fixed',
     errorMessage: 'MyAnimeList API rate limit exceeded. Please wait before making more requests.'
   }
 };
@@ -74,6 +76,7 @@ export class RateLimiter {
   private config: RateLimitConfig;
   private requestTimestamps: number[] = [];
   private nextAllowedRequestTime: number = 0;
+  private consecutiveRateLimitErrors: number = 0;
   
   /**
    * Initialize a rate limiter for a specific API provider
@@ -143,6 +146,8 @@ export class RateLimiter {
    * @returns True if request is allowed, false if rate limited
    */
   public recordRequest(): boolean {
+    // Reset consecutive errors counter on successful requests
+    this.consecutiveRateLimitErrors = 0;
     return this.checkLimit(false);
   }
   
@@ -156,11 +161,27 @@ export class RateLimiter {
     const now = Date.now();
     this.requestTimestamps = [];
     
-    // Use retry-after header if available, otherwise use our window
+    // Increment consecutive rate limit errors
+    this.consecutiveRateLimitErrors++;
+    
+    // Use retry-after header if available
     if (retryAfterSeconds) {
       this.nextAllowedRequestTime = now + (retryAfterSeconds * 1000);
     } else {
-      this.nextAllowedRequestTime = now + this.config.windowMs;
+      // Special handling for providers with known longer cooldowns
+      if (this.providerName === 'mal') {
+        // MAL can have cooldowns up to 5 minutes
+        // Apply exponential backoff based on consecutive errors
+        // Start with 5 seconds, then 10, 20, 40, etc. up to 5 minutes max
+        const backoffSeconds = Math.min(
+          300, // 5 minutes max
+          5 * Math.pow(2, Math.min(this.consecutiveRateLimitErrors - 1, 6))
+        );
+        console.log(`MAL rate limit hit, backing off for ${backoffSeconds} seconds`);
+        this.nextAllowedRequestTime = now + (backoffSeconds * 1000);
+      } else {
+        this.nextAllowedRequestTime = now + this.config.windowMs;
+      }
     }
   }
   

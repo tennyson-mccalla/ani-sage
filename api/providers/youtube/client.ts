@@ -73,7 +73,18 @@ export class YouTubeClient extends BaseAPIClient {
       // Check for quota exceeded message
       const errorData = response.data as any;
       if (errorData?.error?.errors?.some((e: any) => e.reason === 'quotaExceeded')) {
-        throw new Error('YouTube API quota exceeded');
+        // Create an error with rate limit information
+        const error = new Error('YouTube API daily quota exceeded. The quota will reset at midnight Pacific Time.') as Error & {
+          statusCode: number;
+          retryAfter?: number;
+        };
+        error.statusCode = 429; // Use 429 to trigger rate limit handling
+        
+        // Set retry-after to a long time (4 hours) to prevent further quota usage
+        // This isn't perfect since quota resets at midnight PT, but it's a reasonable fallback
+        error.retryAfter = 4 * 60 * 60; // 4 hours in seconds
+        
+        throw error;
       }
     }
     return response;
