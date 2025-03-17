@@ -4,6 +4,7 @@ import QuestionnairePage from './pages/QuestionnairePage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import ProfilePage from './pages/ProfilePage'
 import { UserProvider } from './context/UserContext'
+import './index.css'
 
 function App() {
   return (
