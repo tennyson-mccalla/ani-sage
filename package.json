@@ -12,7 +12,10 @@
     "recommendation-demo": "ts-node recommendation-demo.ts",
     "ui": "cd ui/ui && npm run dev",
     "build-ui": "cd ui/ui && npm run build",
-    "preview-ui": "cd ui/ui && npm run preview"
+    "preview-ui": "cd ui/ui && npm run preview",
+    "deploy-api": "wrangler deploy",
+    "dev-api": "wrangler dev",
+    "build-api": "tsc"
   },
   "dependencies": {
     "@modelcontextprotocol/server-github": "^2025.1.23",
@@ -21,11 +24,13 @@
     "node-cache": "^5.1.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240208.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.24",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "wrangler": "^3.28.1"
   }
 }

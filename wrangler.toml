@@ -1,0 +1,35 @@
+name = "ani-sage-api"
+main = "src/worker.ts"
+compatibility_date = "2024-03-17"
+
+[vars]
+API_VERSION = "v1"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "${KV_SESSIONS_ID}"
+preview_id = "${KV_SESSIONS_ID}"
+
+[[kv_namespaces]]
+binding = "PROFILES"
+id = "${KV_PROFILES_ID}"
+preview_id = "${KV_PROFILES_ID}"
+
+# Environment variables that will be set in Cloudflare dashboard
+[env.production]
+vars = { }
+
+[env.production.kv_namespaces]
+binding = "SESSIONS"
+id = "${KV_SESSIONS_ID}"
+
+[env.production.kv_namespaces]
+binding = "PROFILES"
+id = "${KV_PROFILES_ID}"
+
+# Instructions:
+# 1. Create two KV namespaces in Cloudflare dashboard:
+#    - Name: SESSIONS
+#    - Name: PROFILES
+# 2. Set the KV namespace IDs in your environment variables or .env file
+# 3. For local development, you can use the same IDs for preview_id
