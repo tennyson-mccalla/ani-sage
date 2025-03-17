@@ -25,61 +25,61 @@ apiClient.interceptors.request.use(config => {
 const mapApiDimensionsToUi = (apiDimensions: Record<string, number>): Dimension[] => {
   // Define dimension metadata
   const dimensionMeta: Record<string, { name: string, min: number, max: number, lowLabel: string, highLabel: string }> = {
-    visualComplexity: { 
-      name: 'Visual Complexity', 
-      min: 1, 
-      max: 10, 
-      lowLabel: 'Simple, Clean', 
-      highLabel: 'Detailed, Complex' 
+    visualComplexity: {
+      name: 'Visual Complexity',
+      min: 1,
+      max: 10,
+      lowLabel: 'Simple, Clean',
+      highLabel: 'Detailed, Complex'
     },
-    narrativeComplexity: { 
-      name: 'Narrative Complexity', 
-      min: 1, 
-      max: 10, 
-      lowLabel: 'Straightforward', 
-      highLabel: 'Multi-layered' 
+    narrativeComplexity: {
+      name: 'Narrative Complexity',
+      min: 1,
+      max: 10,
+      lowLabel: 'Straightforward',
+      highLabel: 'Multi-layered'
     },
-    emotionalIntensity: { 
-      name: 'Emotional Intensity', 
-      min: 1, 
-      max: 10, 
-      lowLabel: 'Gentle', 
-      highLabel: 'Intense' 
+    emotionalIntensity: {
+      name: 'Emotional Intensity',
+      min: 1,
+      max: 10,
+      lowLabel: 'Gentle',
+      highLabel: 'Intense'
     },
-    characterComplexity: { 
-      name: 'Character Complexity', 
-      min: 1, 
-      max: 10, 
-      lowLabel: 'Archetypal', 
-      highLabel: 'Nuanced' 
+    characterComplexity: {
+      name: 'Character Complexity',
+      min: 1,
+      max: 10,
+      lowLabel: 'Archetypal',
+      highLabel: 'Nuanced'
     },
-    moralAmbiguity: { 
-      name: 'Moral Ambiguity', 
-      min: 1, 
-      max: 10, 
-      lowLabel: 'Clear Morals', 
-      highLabel: 'Ambiguous' 
+    moralAmbiguity: {
+      name: 'Moral Ambiguity',
+      min: 1,
+      max: 10,
+      lowLabel: 'Clear Morals',
+      highLabel: 'Ambiguous'
     },
-    emotionalValence: { 
-      name: 'Emotional Valence', 
-      min: -5, 
-      max: 5, 
-      lowLabel: 'Dark, Negative', 
-      highLabel: 'Light, Positive' 
+    emotionalValence: {
+      name: 'Emotional Valence',
+      min: -5,
+      max: 5,
+      lowLabel: 'Dark, Negative',
+      highLabel: 'Light, Positive'
     },
-    intellectualEmotional: { 
-      name: 'Intellectual vs. Emotional', 
-      min: -5, 
-      max: 5, 
-      lowLabel: 'Emotional', 
-      highLabel: 'Intellectual' 
+    intellectualEmotional: {
+      name: 'Intellectual vs. Emotional',
+      min: -5,
+      max: 5,
+      lowLabel: 'Emotional',
+      highLabel: 'Intellectual'
     },
-    fantasyRealism: { 
-      name: 'Fantasy vs. Realism', 
-      min: -5, 
-      max: 5, 
-      lowLabel: 'Realistic', 
-      highLabel: 'Fantastic' 
+    fantasyRealism: {
+      name: 'Fantasy vs. Realism',
+      min: -5,
+      max: 5,
+      lowLabel: 'Realistic',
+      highLabel: 'Fantastic'
     }
   };
 
@@ -107,8 +107,8 @@ const mapApiRecommendationToUi = (apiRec: any): AnimeRecommendation => {
     synopsis: apiRec.synopsis || '',
     match: apiRec.score * 10 || 0, // Convert 0-10 to 0-100
     reasons: apiRec.matchReasons?.map((r: any) => r.explanation) || [],
-    trailer: apiRec.externalIds?.youtubeTrailerId ? 
-      `https://youtube.com/watch?v=${apiRec.externalIds.youtubeTrailerId}` : 
+    trailer: apiRec.externalIds?.youtubeTrailerId ?
+      `https://youtube.com/watch?v=${apiRec.externalIds.youtubeTrailerId}` :
       undefined
   };
 };
@@ -160,13 +160,13 @@ const mockData = {
       externalIds: { youtubeTrailerId: '0CJeDetA45Q' }
     }
   ],
-  
+
   // Mock profile data
   profile: {
     dimensions: {
       visualComplexity: 7.5,
       narrativeComplexity: 8.2,
-      emotionalIntensity: 6.8, 
+      emotionalIntensity: 6.8,
       characterComplexity: 8.5,
       moralAmbiguity: 7.9,
       emotionalValence: -2.1,
@@ -188,7 +188,7 @@ const mockData = {
       }
     ]
   },
-  
+
   // Mock questions
   questions: [
     {
@@ -254,30 +254,30 @@ export const apiService = {
   initSession: async () => {
     // Check if we already have a session
     const existingSessionId = localStorage.getItem(apiConfig.sessionStorage.sessionIdKey);
-    
+
     // If mock API is enabled, return fake session data
     if (apiConfig.enableMockApi) {
       const sessionId = existingSessionId || 'mock-session-123';
       // Store session ID for future requests
       localStorage.setItem(apiConfig.sessionStorage.sessionIdKey, sessionId);
-      return { 
-        sessionId, 
+      return {
+        sessionId,
         isNewUser: !existingSessionId,
         profileConfidence: 0.75,
         interactionCount: existingSessionId ? 12 : 0
       };
     }
-    
+
     try {
       // If we have an existing session, include it in the request
       const params = existingSessionId ? { existingSessionId } : {};
       const response = await apiClient.get('/session', { params });
-      
+
       // Store new session ID
       if (response.data && response.data.sessionId) {
         localStorage.setItem(apiConfig.sessionStorage.sessionIdKey, response.data.sessionId);
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('Error initializing session:', error);
@@ -291,20 +291,20 @@ export const apiService = {
   getQuestions: async (count = 5, stage?: number) => {
     // Get session ID
     const sessionId = localStorage.getItem(apiConfig.sessionStorage.sessionIdKey) || 'new-session';
-    
+
     // If mock API is enabled, return mock questions
     if (apiConfig.enableMockApi) {
       console.log('Using mock questions data');
       return mockData.questions;
     }
-    
+
     try {
       // Include session ID in params
       const params: Record<string, any> = { count, sessionId };
       if (stage !== undefined) {
         params.stage = stage;
       }
-      
+
       const response = await apiClient.get('/questions', { params });
       if (response.data && response.data.questions) {
         return response.data.questions;
@@ -325,21 +325,21 @@ export const apiService = {
   submitAnswer: async (questionId: string, optionId: string) => {
     // Get session ID
     const sessionId = localStorage.getItem(apiConfig.sessionStorage.sessionIdKey) || 'new-session';
-    
+
     // If mock API is enabled, return mock success response
     if (apiConfig.enableMockApi) {
       console.log(`Mock API: Submitting answer ${optionId} for question ${questionId}`);
-      return { 
-        success: true, 
-        profileUpdated: true, 
+      return {
+        success: true,
+        profileUpdated: true,
         nextAction: 'more_questions',
         profile: mockData.profile
       };
     }
-    
+
     try {
       // Include session ID in the request body
-      const response = await apiClient.post(`/questions/${questionId}/answer`, { 
+      const response = await apiClient.post(`/questions/${questionId}/answer`, {
         optionId,
         sessionId
       });
@@ -356,7 +356,7 @@ export const apiService = {
   getRecommendations: async (answers: Record<string, string> = {}): Promise<AnimeRecommendation[]> => {
     // Get session ID
     const sessionId = localStorage.getItem(apiConfig.sessionStorage.sessionIdKey) || 'new-session';
-    
+
     // If mock API is enabled, return mock recommendations
     if (apiConfig.enableMockApi) {
       console.log('Using mock recommendations data', answers);
@@ -364,7 +364,7 @@ export const apiService = {
       await new Promise(resolve => setTimeout(resolve, 800));
       return mockData.recommendations.map(mapApiRecommendationToUi);
     }
-    
+
     try {
       // If answers provided, update the profile first
       if (Object.keys(answers).length > 0) {
@@ -373,7 +373,7 @@ export const apiService = {
           await apiService.submitAnswer(questionId, optionId);
         }
       }
-      
+
       // Get recommendations
       const response = await apiClient.get('/recommendations', {
         params: {
@@ -382,7 +382,7 @@ export const apiService = {
           sessionId // Include session ID in params
         }
       });
-      
+
       if (response.data && response.data.recommendations) {
         // Map API response to UI format
         return response.data.recommendations.map(mapApiRecommendationToUi);
@@ -391,64 +391,64 @@ export const apiService = {
       }
     } catch (error) {
       console.error('Error getting recommendations:', error);
-      
+
       // Fallback to mock data if API call fails
       console.log('Falling back to mock recommendations data');
       return mockData.recommendations.map(mapApiRecommendationToUi);
     }
   },
-  
+
   /**
    * Get psychological profile
    */
   getUserProfile: async () => {
     // Get session ID
     const sessionId = localStorage.getItem(apiConfig.sessionStorage.sessionIdKey) || 'new-session';
-    
+
     // If mock API is enabled, return mock profile
     if (apiConfig.enableMockApi) {
       console.log('Using mock profile data');
       // Add a small delay to simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Map mock profile to UI format
       const dimensions = mapApiDimensionsToUi(mockData.profile.dimensions);
-      
+
       // Convert mock adjustments
       const suggestedAdjustments = mockData.profile.suggestedAdjustments.map(adj => ({
-        dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+        dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase()),
         explanation: adj.explanation,
         currentValue: adj.currentValue,
         suggestedValue: adj.suggestedValue
       }));
-      
+
       return {
         dimensions,
         suggestedAdjustments
       };
     }
-    
+
     try {
       // Include session ID in params
       const response = await apiClient.get('/profile', {
         params: { sessionId }
       });
-      
+
       // Map API response to UI format
       const dimensions = mapApiDimensionsToUi(response.data.dimensions);
-      
+
       // Convert adjustments if available
       let suggestedAdjustments: any[] = [];
-      
+
       if (response.data.suggestedAdjustments) {
         suggestedAdjustments = response.data.suggestedAdjustments.map((adj: any) => ({
-          dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+          dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase()),
           explanation: adj.explanation,
           currentValue: adj.currentValue,
           suggestedValue: adj.suggestedValue
         }));
       }
-      
+
       return {
         dimensions,
         suggestedAdjustments,
@@ -456,18 +456,18 @@ export const apiService = {
       };
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      
+
       // Fallback to mock data if API call fails
       console.log('Falling back to mock profile data');
       const dimensions = mapApiDimensionsToUi(mockData.profile.dimensions);
-      
+
       const suggestedAdjustments = mockData.profile.suggestedAdjustments.map(adj => ({
-        dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+        dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase()),
         explanation: adj.explanation,
         currentValue: adj.currentValue,
         suggestedValue: adj.suggestedValue
       }));
-      
+
       return {
         dimensions,
         suggestedAdjustments,
@@ -475,7 +475,7 @@ export const apiService = {
       };
     }
   },
-  
+
   /**
    * Update psychological profile from question answers
    */
@@ -487,7 +487,7 @@ export const apiService = {
       await new Promise(resolve => setTimeout(resolve, 300));
       return;
     }
-    
+
     try {
       // Submit each answer separately to update profile
       for (const [questionId, optionId] of Object.entries(answers)) {
@@ -498,7 +498,7 @@ export const apiService = {
       throw error;
     }
   },
-  
+
   /**
    * Apply suggested adjustments to profile
    */
@@ -510,7 +510,7 @@ export const apiService = {
       await new Promise(resolve => setTimeout(resolve, 300));
       return;
     }
-    
+
     try {
       await apiClient.post('/profile/apply-adjustments');
     } catch (error) {
@@ -526,7 +526,7 @@ export const apiService = {
     // If mock API is enabled, find the anime in mock data
     if (apiConfig.enableMockApi) {
       const mockAnime = mockData.recommendations.find(anime => anime.id === animeId);
-      
+
       if (mockAnime) {
         console.log(`Mock API: Getting details for anime ${animeId}`);
         // Add some additional mock data for details view
@@ -547,10 +547,10 @@ export const apiService = {
             }))
         };
       }
-      
+
       throw new Error(`Anime with ID ${animeId} not found`);
     }
-    
+
     try {
       const response = await apiClient.get(`/recommendations/${animeId}`);
       return response.data;
@@ -566,27 +566,32 @@ export const apiService = {
   submitAnimeFeedback: async (animeId: string, interactionType: 'viewed' | 'selected' | 'watched' | 'rated', rating?: number, feedback?: string) => {
     // If mock API is enabled, just log the feedback
     if (apiConfig.enableMockApi) {
-      console.log(`Mock API: Submitting ${interactionType} feedback for anime ${animeId}`, 
-        rating !== undefined ? `with rating ${rating}` : '', 
+      console.log(`Mock API: Submitting ${interactionType} feedback for anime ${animeId}`,
+        rating !== undefined ? `with rating ${rating}` : '',
         feedback ? `and comment "${feedback}"` : '');
       return;
     }
-    
+
     try {
       const payload: any = { interactionType };
-      
+
       if (interactionType === 'rated' && rating !== undefined) {
         payload.rating = rating;
       }
-      
+
       if (feedback) {
         payload.feedback = feedback;
       }
-      
+
       await apiClient.post(`/recommendations/${animeId}/feedback`, payload);
     } catch (error) {
       console.error(`Error submitting feedback for anime ${animeId}:`, error);
       throw error;
     }
+  },
+
+  sanitizeString: (str: string): string => {
+    // Implementation of sanitizeString function
+    return str;
   }
 };
