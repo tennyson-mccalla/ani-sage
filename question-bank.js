@@ -46,7 +46,7 @@ const questions = [
         id: "v1_simple",
         text: "Image A",
         // Simple, clean, minimalist image
-        imageUrl: "/assets/questions/visual/minimal.jpg",
+        imageUrl: "https://dummyimage.com/600x600/f5f5f5/333333&text=Clean+Simple",
         mappings: [
           { dimension: "visualComplexity", value: 2 },
           { dimension: "colorSaturation", value: 3 }
@@ -56,7 +56,7 @@ const questions = [
         id: "v1_complex",
         text: "Image B",
         // Detailed, ornate, complex image
-        imageUrl: "/assets/questions/visual/complex.jpg",
+        imageUrl: "https://dummyimage.com/600x600/444444/cccccc&text=Detailed+Complex",
         mappings: [
           { dimension: "visualComplexity", value: 8 },
           { dimension: "colorSaturation", value: 7 }
@@ -66,7 +66,7 @@ const questions = [
         id: "v1_vibrant",
         text: "Image C",
         // Vibrant, colorful, energetic image
-        imageUrl: "/assets/questions/visual/vibrant.jpg",
+        imageUrl: "https://dummyimage.com/600x600/ff5722/ffffff&text=Vibrant+Colorful",
         mappings: [
           { dimension: "visualComplexity", value: 6 },
           { dimension: "colorSaturation", value: 9 },
@@ -77,7 +77,7 @@ const questions = [
         id: "v1_muted",
         text: "Image D",
         // Muted, atmospheric, moody image
-        imageUrl: "/assets/questions/visual/muted.jpg",
+        imageUrl: "https://dummyimage.com/600x600/607d8b/ffffff&text=Muted+Atmospheric",
         mappings: [
           { dimension: "visualComplexity", value: 5 },
           { dimension: "colorSaturation", value: 2 },
@@ -238,7 +238,7 @@ const questions = [
       {
         id: "cp1_vivid",
         text: "Palette A",
-        imageUrl: "/assets/questions/colors/vivid.jpg",
+        imageUrl: "https://dummyimage.com/600x200/ff5722/ffffff&text=Vivid+Colors",
         mappings: [
           { dimension: "colorSaturation", value: 9 },
           { dimension: "emotionalValence", value: 3 },
@@ -248,7 +248,7 @@ const questions = [
       {
         id: "cp1_pastel",
         text: "Palette B",
-        imageUrl: "/assets/questions/colors/pastel.jpg",
+        imageUrl: "https://dummyimage.com/600x200/ffcdd2/333333&text=Pastel+Colors",
         mappings: [
           { dimension: "colorSaturation", value: 5 },
           { dimension: "emotionalValence", value: 4 },
@@ -258,7 +258,7 @@ const questions = [
       {
         id: "cp1_dark",
         text: "Palette C",
-        imageUrl: "/assets/questions/colors/dark.jpg",
+        imageUrl: "https://dummyimage.com/600x200/263238/ffffff&text=Dark+Colors",
         mappings: [
           { dimension: "colorSaturation", value: 4 },
           { dimension: "emotionalValence", value: -3 },
@@ -268,7 +268,7 @@ const questions = [
       {
         id: "cp1_muted",
         text: "Palette D",
-        imageUrl: "/assets/questions/colors/muted.jpg",
+        imageUrl: "https://dummyimage.com/600x200/90a4ae/333333&text=Muted+Colors",
         mappings: [
           { dimension: "colorSaturation", value: 2 },
           { dimension: "emotionalValence", value: -1 },

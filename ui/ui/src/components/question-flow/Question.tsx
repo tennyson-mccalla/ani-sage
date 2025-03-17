@@ -58,7 +58,7 @@ export default function Question({ question, onAnswer, isTransitioning }: Questi
             key={option.id}
             onClick={() => !isTransitioning && onAnswer(option.id)}
             disabled={isTransitioning}
-            className={`flex items-start py-3 px-4 rounded-md border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors text-left ${
+            className={`flex items-start py-5 px-5 rounded-md border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors text-left ${
               isTransitioning ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             variants={optionVariants}
@@ -71,7 +71,13 @@ export default function Question({ question, onAnswer, isTransitioning }: Questi
                 <img 
                   src={option.imageUrl} 
                   alt={option.text} 
-                  className="w-16 h-16 object-cover rounded-md mr-4" 
+                  className={`${
+                    option.imageUrl.includes('text=Vivid+Colors') || 
+                    option.imageUrl.includes('text=Pastel+Colors') || 
+                    option.imageUrl.includes('text=Dark+Colors') || 
+                    option.imageUrl.includes('text=Muted+Colors') 
+                      ? 'w-48 h-24' : 'w-40 h-40'
+                  } object-cover rounded-md mr-4`} 
                 />
                 <span>{option.text}</span>
               </div>
