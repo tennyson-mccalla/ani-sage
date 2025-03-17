@@ -16,13 +16,13 @@ dotenv.config();
 async function apiIntegrationDemo() {
   console.log('=== API Integration Demo ===');
   
-  // Create API adapter with manual configuration
+  // Create API adapter with environment variables
   const apiAdapter = new AnimeApiAdapter({
     tmdb: {
-      apiKey: process.env.TMDB_API_KEY || '6bda6769781de560f1015ef410d50ab3'
+      apiKey: process.env.TMDB_API_KEY || 'TMDB_API_KEY_MISSING'
     },
     youtube: {
-      apiKey: process.env.YOUTUBE_API_KEY || 'AIzaSyAVCnOWZvoVMYWm059ZqHGCySH4xlIMXCI'
+      apiKey: process.env.YOUTUBE_API_KEY || 'YOUTUBE_API_KEY_MISSING'
     }
   });
   
