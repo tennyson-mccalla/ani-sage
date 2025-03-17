@@ -539,4 +539,134 @@ export class AniListClient extends BaseAPIClient {
 
     return response as APIResponse<AnimeDetails[]>;
   }
+  
+  /**
+   * Get popular anime
+   * 
+   * @param limit Maximum number of results (default: 50)
+   * @param page Page number for pagination (default: 1)
+   * @returns API response with popular anime
+   */
+  public async getPopularAnime(limit: number = 50, page: number = 1): Promise<APIResponse<AnimeDetails[]>> {
+    const query = `
+      query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
+        Page(page: $page, perPage: $perPage) {
+          media(type: ANIME, sort: $sort) {
+            id
+            title {
+              romaji
+              english
+              native
+            }
+            coverImage {
+              large
+              medium
+            }
+            description
+            format
+            episodes
+            status
+            genres
+            studios {
+              nodes {
+                name
+              }
+            }
+            startDate {
+              year
+              month
+              day
+            }
+            popularity
+            averageScore
+            seasonYear
+            season
+          }
+        }
+      }
+    `;
+
+    const response = await this.graphqlRequest(
+      query,
+      {
+        page,
+        perPage: Math.min(limit, 50),
+        sort: ["POPULARITY_DESC"]
+      }
+    );
+
+    // Transform the response
+    if (response.data?.data?.Page?.media) {
+      response.data = response.data.data.Page.media;
+    } else {
+      response.data = [];
+    }
+
+    return response as APIResponse<AnimeDetails[]>;
+  }
+  
+  /**
+   * Get top-rated anime
+   * 
+   * @param limit Maximum number of results (default: 50)
+   * @param page Page number for pagination (default: 1)
+   * @returns API response with top-rated anime
+   */
+  public async getTopAnime(limit: number = 50, page: number = 1): Promise<APIResponse<AnimeDetails[]>> {
+    const query = `
+      query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
+        Page(page: $page, perPage: $perPage) {
+          media(type: ANIME, sort: $sort) {
+            id
+            title {
+              romaji
+              english
+              native
+            }
+            coverImage {
+              large
+              medium
+            }
+            description
+            format
+            episodes
+            status
+            genres
+            studios {
+              nodes {
+                name
+              }
+            }
+            startDate {
+              year
+              month
+              day
+            }
+            popularity
+            averageScore
+            seasonYear
+            season
+          }
+        }
+      }
+    `;
+
+    const response = await this.graphqlRequest(
+      query,
+      {
+        page,
+        perPage: Math.min(limit, 50),
+        sort: ["SCORE_DESC"]
+      }
+    );
+
+    // Transform the response
+    if (response.data?.data?.Page?.media) {
+      response.data = response.data.data.Page.media;
+    } else {
+      response.data = [];
+    }
+
+    return response as APIResponse<AnimeDetails[]>;
+  }
 }

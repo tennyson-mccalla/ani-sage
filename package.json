@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "start": "./start-ani-sage.sh",
+    "start-api": "ts-node api/server.ts",
     "demo": "ts-node api-integration-demo.ts",
     "api-demo": "ts-node api/demo.ts",
     "recommendation-demo": "ts-node recommendation-demo.ts",
-    "ui": "vite",
-    "build-ui": "vite build",
-    "preview-ui": "vite preview"
+    "ui": "cd ui/ui && npm run dev",
+    "build-ui": "cd ui/ui && npm run build",
+    "preview-ui": "cd ui/ui && npm run preview"
   },
   "dependencies": {
     "@modelcontextprotocol/server-github": "^2025.1.23",

@@ -5,9 +5,41 @@
  * for storing user profiles, anime recommendations, and interaction history.
  */
 
-import { AnimeApiAdapter, AnimeTitle, ApiProvider } from './anime-api-adapter';
+import { AnimeApiAdapter, AnimeTitle as ApiAnimeTitle, ApiProvider } from './anime-api-adapter';
 import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from './anime-attribute-mapper';
-import type { MCPContext, UserProfile, RecommendationSet, RecommendationResult } from '../data-models';
+import type { MCPContext, UserProfile, RecommendationSet, RecommendationResult, AnimeTitle as ModelAnimeTitle } from '../data-models';
+
+// Type adapter function to convert API AnimeTitle to data model AnimeTitle
+function convertApiAnimeToModelAnime(apiAnime: ApiAnimeTitle): ModelAnimeTitle {
+  return {
+    id: apiAnime.id.toString(),
+    title: apiAnime.title,
+    alternativeTitles: apiAnime.alternativeTitles || [],
+    synopsis: apiAnime.synopsis || '',
+    genres: apiAnime.genres || [],
+    year: apiAnime.seasonYear || new Date().getFullYear(),
+    season: apiAnime.season,
+    episodeCount: apiAnime.episodeCount || 0,
+    attributes: mapAnimeToDimensions(apiAnime),
+    popularity: apiAnime.popularity || 0,
+    rating: apiAnime.score || 0,
+    externalIds: {
+      ...apiAnime.externalIds,
+      youtubeTrailerId: apiAnime.trailer ? extractYoutubeId(apiAnime.trailer) : undefined
+    },
+    imageUrls: {
+      poster: apiAnime.image?.large || apiAnime.image?.medium,
+      thumbnail: apiAnime.image?.medium
+    }
+  };
+}
+
+// Extract YouTube ID from URL
+function extractYoutubeId(url?: string): string | undefined {
+  if (!url) return undefined;
+  const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+  return match ? match[1] : undefined;
+}
 
 /**
  * MCP Anime Integration class
@@ -84,9 +116,12 @@ export class MCPAnimeIntegration {
         try {
           const enrichedAnime = await this.apiAdapter.enrichWithTrailer(anime);
           
+          // Convert API anime to model anime
+          const modelAnime = convertApiAnimeToModelAnime(enrichedAnime);
+          
           // Format as RecommendationResult
           const recommendation: RecommendationResult = {
-            anime: enrichedAnime,
+            anime: modelAnime,
             score,
             matchReasons: matchReasons.map(({ dimension, strength, explanation }) => ({
               dimension,
@@ -98,8 +133,11 @@ export class MCPAnimeIntegration {
           return recommendation;
         } catch (error) {
           // If trailer enrichment fails, return without trailer
+          // Convert API anime to model anime
+          const modelAnime = convertApiAnimeToModelAnime(anime);
+          
           const recommendation: RecommendationResult = {
-            anime,
+            anime: modelAnime,
             score,
             matchReasons: matchReasons.map(({ dimension, strength, explanation }) => ({
               dimension,
@@ -169,27 +207,32 @@ export class MCPAnimeIntegration {
   public async getAnimeDetails(
     mcpContext: MCPContext,
     animeId: string
-  ): Promise<AnimeTitle | null> {
-    // First, try to find the anime in previous recommendations
-    if (mcpContext.recommendationHistory && mcpContext.recommendationHistory.length > 0) {
-      for (const rec of mcpContext.recommendationHistory) {
-        if (rec.animeId === animeId) {
-          // Check if this anime ID is in any recommendation set
-          if (mcpContext.recommendationSets) {
-            for (const recSet of mcpContext.recommendationSets) {
-              const foundAnime = recSet.recommendations.find(r => r.anime.id.toString() === animeId);
-              if (foundAnime) {
-                return foundAnime.anime;
-              }
-            }
-          }
+  ): Promise<ModelAnimeTitle | null> {
+    // If the recommendation history isn't available, fetch from API
+    if (!mcpContext.recommendationHistory || mcpContext.recommendationHistory.length === 0) {
+      try {
+        const apiAnime = await this.apiAdapter.getAnimeDetails(parseInt(animeId));
+        if (apiAnime) {
+          return convertApiAnimeToModelAnime(apiAnime);
         }
+        return null;
+      } catch (error) {
+        console.error('Error fetching anime details:', error);
+        return null;
       }
     }
     
+    // Look through recommendation history for this anime ID
+    // Note: In the current MCPContext schema, we don't store the full anime details
+    // in the recommendation history, so we'll need to fetch from the API
+    
     // If not found in context, fetch from API
     try {
-      return await this.apiAdapter.getAnimeDetails(parseInt(animeId));
+      const apiAnime = await this.apiAdapter.getAnimeDetails(parseInt(animeId));
+      if (apiAnime) {
+        return convertApiAnimeToModelAnime(apiAnime);
+      }
+      return null;
     } catch (error) {
       console.error('Error fetching anime details:', error);
       return null;

@@ -32,6 +32,13 @@ export interface AnimeTitle {
   studios?: string[];
   source?: string;
   trailer?: string;
+  externalIds?: {
+    youtubeTrailerId?: string | null;
+    mal?: number;
+    anilist?: number;
+    tmdb?: number;
+    [key: string]: any;
+  };
 }
 
 export interface ApiConfig {
@@ -519,6 +526,26 @@ export class AnimeApiAdapter {
   }
 
   /**
+   * Maps AniList anime details to unified format
+   * 
+   * @param anime AniList anime details
+   * @returns Unified anime format
+   */
+  private mapAniListToAnime(anime: AniListAnimeDetails): AnimeTitle {
+    return this.convertAniListAnime(anime);
+  }
+  
+  /**
+   * Maps MAL anime details to unified format
+   * 
+   * @param anime MAL anime details
+   * @returns Unified anime format
+   */
+  private mapMALToAnime(anime: MALAnimeDetails): AnimeTitle {
+    return this.convertMALAnime(anime);
+  }
+  
+  /**
    * Get popular anime with pagination
    * 
    * @param limit Maximum number of anime to return
@@ -531,7 +558,9 @@ export class AnimeApiAdapter {
         case ApiProvider.ANILIST:
           if (this.anilist) {
             const response = await this.anilist.getPopularAnime(limit, page);
-            return response.data.map(anime => this.mapAniListToAnime(anime));
+            if (response.data) {
+              return response.data.map(anime => this.mapAniListToAnime(anime));
+            }
           }
           break;
           
@@ -543,7 +572,9 @@ export class AnimeApiAdapter {
               'popularity',
               limit
             );
-            return response.data.map(anime => this.mapMALToAnime(anime));
+            if (response.data) {
+              return response.data.map(anime => this.mapMALToAnime(anime));
+            }
           }
           break;
       }
@@ -554,7 +585,9 @@ export class AnimeApiAdapter {
         
         if (provider === ApiProvider.ANILIST && this.anilist) {
           const response = await this.anilist.getPopularAnime(limit, page);
-          return response.data.map(anime => this.mapAniListToAnime(anime));
+          if (response.data) {
+            return response.data.map(anime => this.mapAniListToAnime(anime));
+          }
         }
         
         if (provider === ApiProvider.MAL && this.mal) {
@@ -564,7 +597,9 @@ export class AnimeApiAdapter {
             'popularity',
             limit
           );
-          return response.data.map(anime => this.mapMALToAnime(anime));
+          if (response.data) {
+            return response.data.map(anime => this.mapMALToAnime(anime));
+          }
         }
       }
       
@@ -588,7 +623,9 @@ export class AnimeApiAdapter {
         case ApiProvider.ANILIST:
           if (this.anilist) {
             const response = await this.anilist.getTopAnime(limit, page);
-            return response.data.map(anime => this.mapAniListToAnime(anime));
+            if (response.data) {
+              return response.data.map(anime => this.mapAniListToAnime(anime));
+            }
           }
           break;
           
@@ -600,7 +637,9 @@ export class AnimeApiAdapter {
               'anime_score',
               limit
             );
-            return response.data.map(anime => this.mapMALToAnime(anime));
+            if (response.data) {
+              return response.data.map(anime => this.mapMALToAnime(anime));
+            }
           }
           break;
       }
@@ -611,7 +650,9 @@ export class AnimeApiAdapter {
         
         if (provider === ApiProvider.ANILIST && this.anilist) {
           const response = await this.anilist.getTopAnime(limit, page);
-          return response.data.map(anime => this.mapAniListToAnime(anime));
+          if (response.data) {
+            return response.data.map(anime => this.mapAniListToAnime(anime));
+          }
         }
         
         if (provider === ApiProvider.MAL && this.mal) {
@@ -621,7 +662,9 @@ export class AnimeApiAdapter {
             'anime_score',
             limit
           );
-          return response.data.map(anime => this.mapMALToAnime(anime));
+          if (response.data) {
+            return response.data.map(anime => this.mapMALToAnime(anime));
+          }
         }
       }
       
@@ -649,63 +692,70 @@ export class AnimeApiAdapter {
     attributes.moralAmbiguity = 5;
     attributes.emotionalValence = 0;
     attributes.intellectualEmotional = 0;
+    attributes.visualPace = 5; // Added missing attribute
+    attributes.plotPredictability = 5; // Added missing attribute
+    
+    // Make sure genres exists before trying to use it
+    const genres = anime.genres || [];
     
     // Infer from genres
-    if (anime.genres.includes('Slice of Life')) {
+    if (genres.includes('Slice of Life')) {
       attributes.visualComplexity = 4;
       attributes.narrativeComplexity = 3;
       attributes.emotionalIntensity = 4;
       attributes.emotionalValence = 2;
     }
     
-    if (anime.genres.includes('Action')) {
+    if (genres.includes('Action')) {
       attributes.visualComplexity = 7;
       attributes.visualPace = 8;
       attributes.emotionalIntensity = 7;
     }
     
-    if (anime.genres.includes('Mystery') || anime.genres.includes('Thriller')) {
+    if (genres.includes('Mystery') || genres.includes('Thriller')) {
       attributes.narrativeComplexity = 8;
       attributes.plotPredictability = 3;
       attributes.emotionalIntensity = 7;
     }
     
-    if (anime.genres.includes('Psychological')) {
+    if (genres.includes('Psychological')) {
       attributes.narrativeComplexity = 8;
       attributes.characterComplexity = 8;
       attributes.moralAmbiguity = 8;
       attributes.intellectualEmotional = 3;
     }
     
-    if (anime.genres.includes('Comedy')) {
+    if (genres.includes('Comedy')) {
       attributes.emotionalValence = 3;
     }
     
-    if (anime.genres.includes('Horror')) {
+    if (genres.includes('Horror')) {
       attributes.emotionalValence = -4;
       attributes.emotionalIntensity = 8;
     }
     
-    if (anime.genres.includes('Drama')) {
+    if (genres.includes('Drama')) {
       attributes.characterComplexity = 7;
       attributes.emotionalIntensity = 7;
     }
     
-    if (anime.genres.includes('Romance')) {
+    if (genres.includes('Romance')) {
       attributes.characterComplexity = 6;
       attributes.emotionalIntensity = 6;
       attributes.emotionalValence = 2;
     }
     
     // Episode count can hint at narrative complexity
-    if (anime.episodeCount > 50) {
+    const episodeCount = anime.episodeCount || 0;
+    if (episodeCount > 50) {
       attributes.narrativeComplexity = Math.min(10, attributes.narrativeComplexity + 1);
-    } else if (anime.episodeCount <= 13) {
+    } else if (episodeCount <= 13) {
       attributes.narrativeComplexity = Math.max(1, attributes.narrativeComplexity - 1);
     }
     
-    // Rating can hint at quality/complexity
-    if (anime.rating > 8.5) {
+    // Use score instead of rating since rating property doesn't exist in AnimeTitle interface
+    const score = anime.score || 0;
+    if (score > 8.5) {
       attributes.narrativeComplexity = Math.min(10, attributes.narrativeComplexity + 1);
       attributes.characterComplexity = Math.min(10, attributes.characterComplexity + 1);
     }
@@ -723,38 +773,6 @@ export class AnimeApiAdapter {
     if (month >= 3 && month <= 5) return 'spring';
     if (month >= 6 && month <= 8) return 'summer';
     return 'fall';
-  }
-  
-  /**
-   * Enrich an anime with trailer information
-   * 
-   * @param anime Anime to enrich
-   * @returns Same anime with trailer information added
-   */
-  public async enrichWithTrailer(anime: AnimeTitle): Promise<AnimeTitle> {
-    if (anime.externalIds?.youtubeTrailerId) {
-      return anime;
-    }
-    
-    try {
-      const trailerUrl = await this.getAnimeTrailer(anime.title);
-      
-      if (trailerUrl) {
-        const videoId = this.extractYouTubeId(trailerUrl);
-        
-        return {
-          ...anime,
-          externalIds: {
-            ...anime.externalIds,
-            youtubeTrailerId: videoId
-          }
-        };
-      }
-    } catch (error) {
-      console.error(`Error enriching anime ${anime.id} with trailer:`, error);
-    }
-    
-    return anime;
   }
   
   /**
@@ -814,7 +832,10 @@ export class AnimeApiAdapter {
     }
 
     try {
+      // Get trailer URL
       const trailerUrl = await this.getAnimeTrailer(anime.title);
+      
+      // Create new anime object with trailer information
       return {
         ...anime,
         trailer: trailerUrl || undefined

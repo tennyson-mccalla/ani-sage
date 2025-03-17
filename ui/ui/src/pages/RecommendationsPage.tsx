@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import AnimeCard, { AnimeRecommendation } from '../components/recommendations/AnimeCard';
 import { apiService } from '../services/api';
+import { useUser } from '../context/UserContext';
 
 export default function RecommendationsPage() {
   const location = useLocation();
