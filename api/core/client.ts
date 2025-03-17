@@ -5,8 +5,11 @@
  * - Request handling with fetch API
  * - Response caching
  * - Automatic retry with exponential backoff
- * - Rate limiting
+ * - Rate limiting with provider-specific limits
+ * - Queue/delay mechanism to prevent hitting rate limits
  */
+
+import { rateLimitManager } from './rate-limits';
 
 // Response model
 export interface APIResponse<T = any> {
@@ -48,6 +51,7 @@ export class BaseAPIClient {
   private retryMaxDelay: number;
   private retryableStatusCodes: Set<number>;
   private cacheTTL: number; // Time to live in milliseconds
+  private providerName: string; // API provider name for rate limiting
 
   /**
    * Initialize the API client with reliability features.
@@ -63,6 +67,7 @@ export class BaseAPIClient {
     retryMaxDelay?: number;
     retryableStatusCodes?: number[];
     cacheTTL?: number; // In seconds
+    providerName?: string; // API provider name for rate limiting
   }) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.cacheEnabled = options?.enableCache ?? true;
@@ -73,6 +78,31 @@ export class BaseAPIClient {
     this.retryableStatusCodes = new Set(options?.retryableStatusCodes ?? [408, 429, 500, 502, 503, 504]);
     this.cacheTTL = (options?.cacheTTL ?? 300) * 1000; // Convert to milliseconds
     this.cache = new Map();
+    
+    // Determine provider name from base URL if not explicitly provided
+    this.providerName = options?.providerName || this.detectProviderFromUrl(baseUrl);
+  }
+  
+  /**
+   * Try to detect the provider name from the API URL
+   * 
+   * @param url API base URL
+   * @returns Provider name or 'unknown'
+   */
+  private detectProviderFromUrl(url: string): string {
+    const urlLower = url.toLowerCase();
+    
+    if (urlLower.includes('youtube') || urlLower.includes('googleapis')) {
+      return 'youtube';
+    } else if (urlLower.includes('themoviedb') || urlLower.includes('tmdb')) {
+      return 'tmdb';
+    } else if (urlLower.includes('anilist')) {
+      return 'anilist';
+    } else if (urlLower.includes('myanimelist') || urlLower.includes('mal-api')) {
+      return 'mal';
+    }
+    
+    return 'unknown';
   }
 
   /**
@@ -272,11 +302,11 @@ export class BaseAPIClient {
   }
 
   /**
-   * Make an HTTP request with caching, retries, and backoff.
+   * Make an HTTP request with caching, rate limiting, retries, and backoff.
    * 
    * @param options Request options (method, endpoint, params, data, headers)
    * @returns Promise resolving to the API response
-   * @throws Error if all retry attempts fail
+   * @throws Error if all retry attempts fail or rate limited
    */
   public async request<T = any>(options: RequestOptions): Promise<APIResponse<T>> {
     const { 
@@ -297,6 +327,30 @@ export class BaseAPIClient {
         return cachedResponse;
       }
     }
+    
+    // Rate limiting check
+    if (this.rateLimitEnabled) {
+      // Check if we're allowed to make this request
+      if (!rateLimitManager.checkLimit(this.providerName)) {
+        // Calculate delay before we can try again
+        const waitTime = rateLimitManager.getTimeUntilNextRequest(this.providerName);
+        
+        if (waitTime <= 0) {
+          // Something is wrong with the rate limiter, proceed with caution
+          console.warn(`Rate limiter reported limit exceeded but gave invalid wait time for ${this.providerName}`);
+        } else if (waitTime < 10000) {
+          // If wait time is reasonable, actually wait
+          console.log(`Rate limit reached for ${this.providerName}, waiting ${waitTime}ms before retrying`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // If wait time is too long, throw rate limit error
+          const errorMsg = `Rate limit exceeded for ${this.providerName}. Try again in ${Math.ceil(waitTime / 1000)} seconds.`;
+          const error = new Error(errorMsg) as Error & { statusCode: number };
+          error.statusCode = 429;
+          throw error;
+        }
+      }
+    }
 
     // Initialize retry tracking
     let attempt = 0;
@@ -305,6 +359,11 @@ export class BaseAPIClient {
     // Retry loop with exponential backoff
     while (attempt <= this.maxRetries) {
       try {
+        // Record this request attempt for rate limiting
+        if (this.rateLimitEnabled) {
+          rateLimitManager.recordRequest(this.providerName);
+        }
+        
         // Execute the request
         const result = await this.executeRequest(method, url, params, data, headers);
         
@@ -323,6 +382,22 @@ export class BaseAPIClient {
         return apiResponse;
       } catch (err: any) {
         lastError = err;
+        
+        // Handle rate limiting errors specifically
+        if (err.statusCode === 429) {
+          // Extract retry-after if available
+          let retryAfter: number | undefined;
+          if (err.headers && err.headers['retry-after']) {
+            retryAfter = parseInt(err.headers['retry-after'], 10);
+          } else if (err.retryAfter) {
+            retryAfter = err.retryAfter;
+          }
+          
+          // Update rate limiter with the 429 response
+          if (this.rateLimitEnabled) {
+            rateLimitManager.handleRateLimitResponse(this.providerName, retryAfter);
+          }
+        }
         
         // Determine if we should retry based on the error
         let shouldRetry = false;

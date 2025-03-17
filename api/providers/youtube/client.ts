@@ -55,7 +55,10 @@ export class YouTubeClient extends BaseAPIClient {
       maxRetries?: number;
     }
   ) {
-    super('https://www.googleapis.com/youtube/v3', options);
+    super('https://www.googleapis.com/youtube/v3', {
+      ...options,
+      providerName: 'youtube' // Explicitly set provider name for rate limiting
+    });
     this.apiKey = apiKey;
   }
 

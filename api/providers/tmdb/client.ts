@@ -122,7 +122,10 @@ export class TMDbClient extends BaseAPIClient {
       maxRetries?: number;
     }
   ) {
-    super('https://api.themoviedb.org/3', options);
+    super('https://api.themoviedb.org/3', {
+      ...options,
+      providerName: 'tmdb' // Explicitly set provider name for rate limiting
+    });
     this.apiKey = apiKey;
     this.language = options?.language || 'en-US';
     this.includeAdult = options?.includeAdult ?? false;

@@ -28,3 +28,10 @@
 - MCP integration for context awareness
 - Modular design with separation between data models and algorithms
 - Test-driven development with comprehensive test coverage
+
+## Security Guidelines
+- **API Keys**: Always use environment variables for sensitive information, never hardcode keys
+- **Environment Files**: Use .env for local development with .env.example as a template (without real values)
+- **Default Values**: For fallbacks, use descriptive placeholders like 'API_KEY_MISSING' rather than empty strings
+- **Pre-commit Checks**: Scan code for potential secrets before committing
+- **Error Handling**: Gracefully handle missing API keys with user-friendly error messages
