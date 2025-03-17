@@ -13,7 +13,9 @@
     "declaration": true,
     "sourceMap": true,
     "lib": ["ES2020", "DOM"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "noImplicitAny": false,
+    "types": ["node"]
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]

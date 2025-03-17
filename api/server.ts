@@ -4,8 +4,8 @@
  * This file serves as the entry point for the API server.
  */
 
-import http from 'http';
-import url from 'url';
+import * as http from 'http';
+import * as url from 'url';
 import dotenv from 'dotenv';
 import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter';
 import { createApiAdapter } from './index';

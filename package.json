@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "start": "./start-ani-sage.sh",
-    "start-api": "ts-node api/server.ts",
+    "start-api": "ts-node --transpileOnly api/server.ts",
     "demo": "ts-node api-integration-demo.ts",
     "api-demo": "ts-node api/demo.ts",
     "recommendation-demo": "ts-node recommendation-demo.ts",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "@types/node": "^20.11.20",
+    "@types/node": "^20.17.24",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",

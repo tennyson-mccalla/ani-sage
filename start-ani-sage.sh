@@ -36,7 +36,8 @@ fi
 
 # Start the API server
 echo -e "${GREEN}Starting API Server...${NC}"
-npm run start-api &
+# Use ts-node with --transpileOnly to skip type checking
+TS_NODE_TRANSPILE_ONLY=true npm run start-api &
 API_PID=$!
 echo "API Server started with PID: $API_PID"
 
