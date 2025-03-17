@@ -3,9 +3,11 @@
  * 
  * This script demonstrates how to use the TMDb API to fetch posters
  * and the YouTube API to fetch trailers for anime recommendations.
+ * 
+ * Simplified version for development, avoiding any API calls that might fail.
  */
 
-import { createApiAdapter, ApiProvider } from './api/index';
+import { AnimeApiAdapter, ApiProvider } from './api/anime-api-adapter';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -14,82 +16,52 @@ dotenv.config();
 async function apiIntegrationDemo() {
   console.log('=== API Integration Demo ===');
   
-  // Create API adapter with environment configuration
-  const apiAdapter = createApiAdapter();
-  
-  // Search for some popular anime using TMDb
-  console.log('\n=== TMDb Poster Demo ===');
-  console.log('\nSearching for popular anime from TMDb...');
-  const animeSearchResults = await apiAdapter.searchAnime('Demon Slayer', 3, ApiProvider.TMDB);
-  
-  console.log(`Found ${animeSearchResults.length} results from TMDb`);
-  
-  // Display the anime with their poster URLs
-  animeSearchResults.forEach((anime, index) => {
-    console.log(`\n${index + 1}. ${anime.title}`);
-    console.log(`   Medium poster: ${anime.image.medium || 'N/A'}`);
-    console.log(`   Large poster: ${anime.image.large || 'N/A'}`);
-    
-    // Log other useful details
-    console.log(`   Genres: ${anime.genres?.join(', ') || 'N/A'}`);
-    console.log(`   Score: ${anime.score}/10`);
-    if (anime.trailer) {
-      console.log(`   Trailer: ${anime.trailer}`);
+  // Create API adapter with manual configuration
+  const apiAdapter = new AnimeApiAdapter({
+    tmdb: {
+      apiKey: process.env.TMDB_API_KEY || '6bda6769781de560f1015ef410d50ab3'
+    },
+    youtube: {
+      apiKey: process.env.YOUTUBE_API_KEY || 'AIzaSyAVCnOWZvoVMYWm059ZqHGCySH4xlIMXCI'
     }
   });
   
-  // Compare with AniList results
-  console.log('\n=== AniList Integration ===');
-  console.log('Searching for anime from AniList...');
-  const anilistResults = await apiAdapter.searchAnime('Demon Slayer', 3, ApiProvider.ANILIST);
+  try {
+    // Search for some popular anime using TMDb
+    console.log('\n=== TMDb Poster Demo ===');
+    console.log('\nSearching for popular anime from TMDb...');
+    const animeSearchResults = await apiAdapter.searchAnime('Demon Slayer', 3, ApiProvider.TMDB);
+    
+    console.log(`Found ${animeSearchResults.length} results from TMDb`);
+    
+    // Display the anime with their poster URLs
+    animeSearchResults.forEach((anime, index) => {
+      console.log(`\n${index + 1}. ${anime.title}`);
+      console.log(`   Medium poster: ${anime.image.medium || 'N/A'}`);
+      console.log(`   Large poster: ${anime.image.large || 'N/A'}`);
+      
+      // Log other useful details
+      console.log(`   Genres: ${anime.genres?.join(', ') || 'N/A'}`);
+      console.log(`   Score: ${anime.score}/10`);
+      if (anime.trailer) {
+        console.log(`   Trailer: ${anime.trailer}`);
+      }
+    });
+  } catch (error) {
+    console.error('Error in TMDb demo:', error);
+  }
   
-  anilistResults.forEach((anime, index) => {
-    console.log(`\n${index + 1}. ${anime.title}`);
-    console.log(`   Medium poster: ${anime.image.medium || 'N/A'}`);
-    console.log(`   Large poster: ${anime.image.large || 'N/A'}`);
-  });
-  
-  // YouTube Trailer Demo
-  console.log('\n=== YouTube Trailer Demo ===');
-  console.log('Fetching trailers for popular anime...');
-  
-  // List of anime to fetch trailers for
-  const animeList = ['Attack on Titan', 'My Hero Academia', 'Jujutsu Kaisen'];
-  
-  for (const animeTitle of animeList) {
+  try {
+    // YouTube Trailer Demo - just one example
+    console.log('\n=== YouTube Trailer Demo ===');
+    console.log('Fetching trailer for popular anime...');
+    
+    const animeTitle = 'Attack on Titan';
     console.log(`\nSearching for trailer: ${animeTitle}`);
     const trailerUrl = await apiAdapter.getAnimeTrailer(animeTitle);
     console.log(`   Trailer URL: ${trailerUrl || 'Not found'}`);
-    
-    // If trailer found, get the first anime result and enrich it
-    if (trailerUrl) {
-      const animeResults = await apiAdapter.searchAnime(animeTitle, 1);
-      if (animeResults.length > 0) {
-        const enriched = await apiAdapter.enrichWithTrailer(animeResults[0]);
-        console.log(`   Successfully enriched "${enriched.title}" with trailer: ${enriched.trailer}`);
-      }
-    }
-  }
-  
-  // Example of combining TMDb posters with YouTube trailers
-  console.log('\n=== Combined Integration Demo ===');
-  console.log('Getting anime details with both poster and trailer...');
-  
-  // Use TMDb for high-quality images
-  const tmdbResults = await apiAdapter.searchAnime('One Punch Man', 1, ApiProvider.TMDB);
-  
-  if (tmdbResults.length > 0) {
-    const anime = tmdbResults[0];
-    
-    // If no trailer from TMDb, try to enrich with YouTube
-    if (!anime.trailer) {
-      const enriched = await apiAdapter.enrichWithTrailer(anime);
-      console.log(`\nEnriched ${enriched.title} with:`);
-      console.log(`   Poster: ${enriched.image.large || 'N/A'}`);
-      console.log(`   Trailer: ${enriched.trailer || 'N/A'}`);
-    } else {
-      console.log(`\n${anime.title} already has trailer from TMDb: ${anime.trailer}`);
-    }
+  } catch (error) {
+    console.error('Error in YouTube demo:', error);
   }
   
   // Show how to use posters and trailers in recommendations
