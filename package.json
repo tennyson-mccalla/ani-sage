@@ -7,7 +7,10 @@
     "test": "jest",
     "demo": "ts-node api-integration-demo.ts",
     "api-demo": "ts-node api/demo.ts",
-    "recommendation-demo": "ts-node recommendation-demo.ts"
+    "recommendation-demo": "ts-node recommendation-demo.ts",
+    "ui": "vite",
+    "build-ui": "vite build",
+    "preview-ui": "vite preview"
   },
   "dependencies": {
     "@modelcontextprotocol/server-github": "^2025.1.23",
