@@ -1,11 +1,17 @@
 /**
  * Question Bank
- * 
+ *
  * This module defines the psychological profiling questions used to determine
  * user preferences and build their psychological profile.
  */
 
 import type { Question, QuestionOption } from './data-models';
+
+// Initialize the question bank
+const questions = getQuestionBank();
+
+// Export the questions array
+export { questions };
 
 /**
  * Get all questions in the question bank
@@ -13,7 +19,7 @@ import type { Question, QuestionOption } from './data-models';
 export function getQuestionBank(): Question[] {
   // Start with empty questions (structure only)
   const questions = getEmptySampleQuestions();
-  
+
   // Fill in the question options with proper mappings
   return questions.map(question => {
     // Add psychological dimension mappings to options
@@ -23,7 +29,7 @@ export function getQuestionBank(): Question[] {
         mappings: getMappingsForOption(question.id, option.id)
       };
     });
-    
+
     return {
       ...question,
       options: filledOptions
@@ -33,13 +39,13 @@ export function getQuestionBank(): Question[] {
 
 /**
  * Get the mappings for a specific question option
- * 
+ *
  * @param questionId The ID of the question
  * @param optionId The ID of the option
  * @returns Array of psychological dimension mappings
  */
 function getMappingsForOption(
-  questionId: string, 
+  questionId: string,
   optionId: string
 ): Array<{
   dimension: string;
@@ -74,7 +80,7 @@ function getMappingsForOption(
         return [];
     }
   }
-  
+
   // Narrative complexity question
   if (questionId === 'narrative-complexity') {
     switch (optionId) {
@@ -97,7 +103,7 @@ function getMappingsForOption(
         return [];
     }
   }
-  
+
   // Character depth question
   if (questionId === 'character-depth') {
     switch (optionId) {
@@ -120,7 +126,7 @@ function getMappingsForOption(
         return [];
     }
   }
-  
+
   // Moral ambiguity question
   if (questionId === 'moral-ambiguity') {
     switch (optionId) {
@@ -140,7 +146,7 @@ function getMappingsForOption(
         return [];
     }
   }
-  
+
   // Emotional tone question
   if (questionId === 'emotional-tone') {
     switch (optionId) {
@@ -168,7 +174,7 @@ function getMappingsForOption(
         return [];
     }
   }
-  
+
   // If we don't recognize the question, return empty mappings
   return [];
 }
@@ -245,13 +251,13 @@ export function getEmptySampleQuestions(): Question[] {
 
 /**
  * Get a question from the question bank by ID
- * 
+ *
  * @param questions Array of questions to search
  * @param questionId The ID of the question to find
  * @returns The question or undefined if not found
  */
 export function getSampleQuestionById(
-  questions: Question[], 
+  questions: Question[],
   questionId: string
 ): Question | undefined {
   return questions.find(q => q.id === questionId);
@@ -259,7 +265,7 @@ export function getSampleQuestionById(
 
 /**
  * Select the next question to ask based on the user's profile
- * 
+ *
  * @param userProfile The user's current profile
  * @param answeredIds IDs of questions already answered
  * @returns The next question to ask
@@ -269,58 +275,58 @@ export function selectNextQuestion(
   answeredIds: string[] = []
 ): Question | null {
   const allQuestions = getQuestionBank();
-  
+
   // Filter out already answered questions
   const unansweredQuestions = allQuestions.filter(
     q => !answeredIds.includes(q.id) && !userProfile.answeredQuestions.includes(q.id)
   );
-  
+
   if (unansweredQuestions.length === 0) {
     return null;
   }
-  
+
   // Find dimensions with lowest confidence
   const confidences = userProfile.confidences || {};
-  const dimensionConfidences: Array<{ dimension: string; confidence: number }> = 
+  const dimensionConfidences: Array<{ dimension: string; confidence: number }> =
     Object.entries(confidences).map(([dimension, confidence]) => ({
       dimension,
       confidence: confidence || 0
     }));
-  
+
   // Sort by confidence (ascending)
   dimensionConfidences.sort((a, b) => a.confidence - b.confidence);
-  
+
   // Get low-confidence dimensions to target
   const targetDimensions = dimensionConfidences
     .filter(d => d.confidence < 0.5)
     .map(d => d.dimension)
     .slice(0, 3);
-  
+
   // If we have low-confidence dimensions, prioritize questions targeting them
   if (targetDimensions.length > 0) {
     // Find questions that target these dimensions
     const targetingQuestions = unansweredQuestions.filter(q =>
       q.targetDimensions.some(d => targetDimensions.includes(d))
     );
-    
+
     if (targetingQuestions.length > 0) {
       // Get random question from targeting questions
       return targetingQuestions[Math.floor(Math.random() * targetingQuestions.length)];
     }
   }
-  
+
   // If no targeting questions or no low-confidence dimensions,
   // get a question from the earliest stage that hasn't been completed
   const stages = Array.from(new Set(unansweredQuestions.map(q => q.stage))).sort();
-  
+
   if (stages.length > 0) {
     const earliestStage = stages[0];
     const stageQuestions = unansweredQuestions.filter(q => q.stage === earliestStage);
-    
+
     // Get random question from stage
     return stageQuestions[Math.floor(Math.random() * stageQuestions.length)];
   }
-  
+
   // If all else fails, return a random unanswered question
   return unansweredQuestions[Math.floor(Math.random() * unansweredQuestions.length)];
 }

@@ -1,12 +1,12 @@
 /**
  * Anime Attribute Mapping
- * 
+ *
  * Maps anime attributes from external APIs to psychological dimensions
  * used in the recommendation system. This creates a bridge between
  * objective anime metadata and subjective psychological preferences.
  */
 
-import { AnimeTitle } from './anime-api-adapter';
+import type { AnimeTitle } from './anime-api-adapter.js';
 
 // Genre dimension mappings - how genres correlate to psychological dimensions
 const genreDimensionMappings: Record<string, Record<string, number>> = {
@@ -173,7 +173,7 @@ const statusDimensionMappings: Record<string, Record<string, number>> = {
 // Score to dimension mappings - how user ratings correlate to dimensions
 const scoreToDimensionMapping = (score?: number): Record<string, number> => {
   if (!score) return {};
-  
+
   // Higher scores correlate with certain dimensions
   if (score >= 8) {
     return {
@@ -187,14 +187,14 @@ const scoreToDimensionMapping = (score?: number): Record<string, number> => {
       narrativeComplexity: 6
     };
   }
-  
+
   return {};
 };
 
 // Popularity to dimension mappings
 const popularityToDimensionMapping = (popularity?: number): Record<string, number> => {
   if (!popularity) return {};
-  
+
   // Very popular shows tend to have certain characteristics
   if (popularity < 1000) { // Highly popular
     return {
@@ -205,7 +205,7 @@ const popularityToDimensionMapping = (popularity?: number): Record<string, numbe
       noveltyFamiliarity: 0 // Neutral
     };
   }
-  
+
   return {
     noveltyFamiliarity: 2 // More novel than familiar
   };
@@ -214,9 +214,9 @@ const popularityToDimensionMapping = (popularity?: number): Record<string, numbe
 // Season to color mapping - different seasons have different visual tones
 const seasonToDimensionMapping = (season?: string): Record<string, number> => {
   if (!season) return {};
-  
+
   const seasonLower = season.toLowerCase();
-  
+
   if (seasonLower === 'winter') {
     return {
       colorSaturation: 4,
@@ -238,13 +238,13 @@ const seasonToDimensionMapping = (season?: string): Record<string, number> => {
       emotionalValence: 0
     };
   }
-  
+
   return {};
 };
 
 /**
  * Maps anime attributes to psychological dimensions
- * 
+ *
  * @param anime Anime title with metadata
  * @returns Object mapping psychological dimensions to values (0-10)
  */
@@ -277,16 +277,16 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
     popularity: 0.4,
     season: 0.4
   };
-  
+
   // Apply genre mappings
   if (anime.genres && anime.genres.length > 0) {
     let genreCount = 0;
-    
+
     anime.genres.forEach(genre => {
       const mappings = genreDimensionMappings[genre];
       if (mappings) {
         genreCount++;
-        
+
         // Apply each dimension mapping with genre weight
         Object.entries(mappings).forEach(([dimension, value]) => {
           if (dimension in dimensions) {
@@ -295,13 +295,13 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
         });
       }
     });
-    
+
     // Normalize genre impact based on number of matched genres
     if (genreCount > 0) {
       // Already applied in weighted average above
     }
   }
-  
+
   // Apply studio mappings
   if (anime.studios && anime.studios.length > 0) {
     anime.studios.forEach(studio => {
@@ -316,7 +316,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       }
     });
   }
-  
+
   // Apply format mappings
   if (anime.format) {
     const mappings = formatDimensionMappings[anime.format];
@@ -328,7 +328,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       });
     }
   }
-  
+
   // Apply status mappings
   if (anime.status) {
     const mappings = statusDimensionMappings[anime.status];
@@ -340,7 +340,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       });
     }
   }
-  
+
   // Apply score mappings
   const scoreMappings = scoreToDimensionMapping(anime.score);
   Object.entries(scoreMappings).forEach(([dimension, value]) => {
@@ -348,7 +348,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       dimensions[dimension] += (value - dimensions[dimension]) * weights.score;
     }
   });
-  
+
   // Apply popularity mappings
   const popularityMappings = popularityToDimensionMapping(anime.popularity);
   Object.entries(popularityMappings).forEach(([dimension, value]) => {
@@ -356,7 +356,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       dimensions[dimension] += (value - dimensions[dimension]) * weights.popularity;
     }
   });
-  
+
   // Apply season mappings
   const seasonMappings = seasonToDimensionMapping(anime.season);
   Object.entries(seasonMappings).forEach(([dimension, value]) => {
@@ -364,10 +364,10 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
       dimensions[dimension] += (value - dimensions[dimension]) * weights.season;
     }
   });
-  
+
   // Ensure values are within bounds
   Object.entries(dimensions).forEach(([dimension, value]) => {
-    if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' || 
+    if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' ||
         dimension === 'intellectualEmotional' || dimension === 'noveltyFamiliarity') {
       // These dimensions are on a -5 to 5 scale
       dimensions[dimension] = Math.max(-5, Math.min(5, value));
@@ -382,7 +382,7 @@ export function mapAnimeToDimensions(anime: AnimeTitle): Record<string, number> 
 
 /**
  * Get explanation for why an anime matches a user's profile
- * 
+ *
  * @param anime Anime title
  * @param userProfile User's psychological profile
  * @returns Array of explanations for strong matches
@@ -393,7 +393,7 @@ export function getMatchExplanations(
 ): Array<{dimension: string, strength: number, explanation: string}> {
   const animeDimensions = mapAnimeToDimensions(anime);
   const matches: Array<{dimension: string, strength: number, explanation: string}> = [];
-  
+
   // Dimension names in human-readable format
   const dimensionNames: Record<string, string> = {
     visualComplexity: 'Visual Complexity',
@@ -411,7 +411,7 @@ export function getMatchExplanations(
     intellectualEmotional: 'Intellectual Appeal',
     noveltyFamiliarity: 'Novelty'
   };
-  
+
   // Explanation templates
   const explanationTemplates: Record<string, Array<string>> = {
     visualComplexity: [
@@ -439,7 +439,7 @@ export function getMatchExplanations(
       'The {value} setting matches your preference for fantasy vs. realism'
     ]
   };
-  
+
   // Value descriptors
   const getValueDescriptor = (dimension: string, value: number): string => {
     if (dimension === 'emotionalValence') {
@@ -449,7 +449,7 @@ export function getMatchExplanations(
       if (value > -3) return 'somber';
       return 'dark';
     }
-    
+
     if (dimension === 'fantasyRealism') {
       if (value > 3) return 'highly fantastical';
       if (value > 1) return 'fantasy-oriented';
@@ -457,7 +457,7 @@ export function getMatchExplanations(
       if (value > -3) return 'grounded';
       return 'highly realistic';
     }
-    
+
     if (dimension === 'intellectualEmotional') {
       if (value > 3) return 'intellectually stimulating';
       if (value > 1) return 'thought-provoking';
@@ -465,7 +465,7 @@ export function getMatchExplanations(
       if (value > -3) return 'emotionally engaging';
       return 'emotionally powerful';
     }
-    
+
     if (dimension === 'noveltyFamiliarity') {
       if (value > 3) return 'highly innovative';
       if (value > 1) return 'fresh';
@@ -473,7 +473,7 @@ export function getMatchExplanations(
       if (value > -3) return 'comfortably familiar';
       return 'classic';
     }
-    
+
     // For 0-10 scale dimensions
     if (value >= 8) return 'high';
     if (value >= 6) return 'moderate';
@@ -481,16 +481,16 @@ export function getMatchExplanations(
     if (value >= 2) return 'subtle';
     return 'minimal';
   };
-  
+
   // Calculate match strength for each dimension
   Object.entries(userProfile).forEach(([dimension, userValue]) => {
     if (dimension in animeDimensions) {
       const animeValue = animeDimensions[dimension];
-      
+
       // Calculate how close the anime is to user's preference
       let similarity: number;
-      
-      if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' || 
+
+      if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' ||
           dimension === 'intellectualEmotional' || dimension === 'noveltyFamiliarity') {
         // For -5 to 5 scale, normalize distance to 0-1
         similarity = 1 - (Math.abs(userValue - animeValue) / 10);
@@ -498,19 +498,19 @@ export function getMatchExplanations(
         // For 0-10 scale, normalize distance to 0-1
         similarity = 1 - (Math.abs(userValue - animeValue) / 10);
       }
-      
+
       // Only include strong matches
       if (similarity >= 0.8) {
         const descriptor = getValueDescriptor(dimension, animeValue);
-        
+
         // Get a random explanation template
         const templates = explanationTemplates[dimension] || [
           `Matches your preference for ${dimensionNames[dimension] || dimension}`
         ];
         const template = templates[Math.floor(Math.random() * templates.length)];
-        
+
         const explanation = template.replace('{value}', descriptor);
-        
+
         matches.push({
           dimension,
           strength: similarity,
@@ -519,17 +519,17 @@ export function getMatchExplanations(
       }
     }
   });
-  
+
   // Sort by match strength (highest first)
   matches.sort((a, b) => b.strength - a.strength);
-  
+
   // Return top matches
   return matches.slice(0, 3);
 }
 
 /**
  * Calculate overall match score between anime and user profile
- * 
+ *
  * @param anime Anime title or pre-mapped dimensions
  * @param userProfile User's psychological profile
  * @returns Match score from 0-100
@@ -540,7 +540,7 @@ export function calculateMatchScore(
 ): number {
   // Get anime dimensions if not already provided
   const animeDimensions = 'title' in anime ? mapAnimeToDimensions(anime as AnimeTitle) : anime;
-  
+
   // Dimension importance weights
   const dimensionWeights: Record<string, number> = {
     visualComplexity: 0.8,
@@ -558,20 +558,20 @@ export function calculateMatchScore(
     intellectualEmotional: 0.8,
     noveltyFamiliarity: 0.6
   };
-  
+
   let totalWeight = 0;
   let weightedSimilaritySum = 0;
-  
+
   // Calculate weighted similarity across all dimensions
   Object.entries(userProfile).forEach(([dimension, userValue]) => {
     if (dimension in animeDimensions && dimension in dimensionWeights) {
       const animeValue = animeDimensions[dimension];
       const weight = dimensionWeights[dimension];
-      
+
       // Calculate similarity based on dimension scale
       let similarity: number;
-      
-      if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' || 
+
+      if (dimension === 'emotionalValence' || dimension === 'fantasyRealism' ||
           dimension === 'intellectualEmotional' || dimension === 'noveltyFamiliarity') {
         // For -5 to 5 scale, normalize distance to 0-1
         similarity = 1 - (Math.abs(userValue - animeValue) / 10);
@@ -579,15 +579,15 @@ export function calculateMatchScore(
         // For 0-10 scale, normalize distance to 0-1
         similarity = 1 - (Math.abs(userValue - animeValue) / 10);
       }
-      
+
       weightedSimilaritySum += similarity * weight;
       totalWeight += weight;
     }
   });
-  
+
   // Calculate final weighted score (0-100)
   const matchScore = (weightedSimilaritySum / totalWeight) * 100;
-  
+
   // Round to nearest integer
   return Math.round(matchScore);
 }

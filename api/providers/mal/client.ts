@@ -1,4 +1,4 @@
-import { BaseAPIClient, APIResponse } from '../../core/client';
+import { BaseAPIClient, APIResponse } from '../../core/client.js';
 
 // MAL Models
 export interface AlternativeTitles {
@@ -69,7 +69,7 @@ export interface AnimeStatus {
 
 /**
  * MyAnimeList API client
- * 
+ *
  * Provides access to the MyAnimeList API v2 for anime data
  */
 export class MALClient extends BaseAPIClient {
@@ -79,7 +79,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Initialize the MAL client
-   * 
+   *
    * @param clientId MAL API client ID
    * @param clientSecret Optional client secret
    * @param accessToken Optional OAuth access token
@@ -103,7 +103,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get headers with authentication
-   * 
+   *
    * @returns Headers object with authentication
    */
   private getHeaders(): Record<string, string> {
@@ -120,7 +120,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Search for anime by title
-   * 
+   *
    * @param query Search query string
    * @param limit Maximum number of results (default 10, max 100)
    * @param fields Optional fields to include in the response
@@ -168,7 +168,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get detailed information about a specific anime
-   * 
+   *
    * @param animeId MAL anime ID
    * @returns API response with detailed anime information
    */
@@ -197,7 +197,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Set or update the OAuth access token
-   * 
+   *
    * @param accessToken OAuth access token
    */
   public setAuthToken(accessToken: string): void {
@@ -209,7 +209,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get user information
-   * 
+   *
    * @param username MAL username (use '@me' for authenticated user)
    * @returns API response with user information
    */
@@ -232,7 +232,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get a user's anime list
-   * 
+   *
    * @param username MAL username (use '@me' for authenticated user)
    * @param status Optional filter by status
    * @param sort Field to sort by (default 'list_score')
@@ -272,7 +272,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Update anime status in user's list
-   * 
+   *
    * @param animeId MAL anime ID
    * @param status Status to set
    * @param score Optional score (0-10)
@@ -306,7 +306,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get seasonal anime list
-   * 
+   *
    * @param year Year of the season
    * @param season Season (winter, spring, summer, fall)
    * @param sort Sort order (default 'anime_score')
@@ -350,7 +350,7 @@ export class MALClient extends BaseAPIClient {
 
   /**
    * Get anime suggestions based on user's list
-   * 
+   *
    * @param limit Maximum number of results (default 100, max 100)
    * @param offset Pagination offset
    * @param fields Optional fields to include in the response

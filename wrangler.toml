@@ -7,13 +7,13 @@ API_VERSION = "v1"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "${KV_SESSIONS_ID}"
-preview_id = "${KV_SESSIONS_ID}"
+id = "6640a5d4798a4838a122595bcb91bd18"
+preview_id = "6640a5d4798a4838a122595bcb91bd18"
 
 [[kv_namespaces]]
 binding = "PROFILES"
-id = "${KV_PROFILES_ID}"
-preview_id = "${KV_PROFILES_ID}"
+id = "9b5a78b00ec8425ea527fbfa931e8100"
+preview_id = "9b5a78b00ec8425ea527fbfa931e8100"
 
 # Environment variables that will be set in Cloudflare dashboard
 [env.production]

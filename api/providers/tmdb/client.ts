@@ -1,10 +1,10 @@
 /**
  * TMDb API client implementation
- * 
+ *
  * Provides access to The Movie Database API for anime/TV show data
  */
 
-import { BaseAPIClient, APIResponse } from '../../core/client';
+import { BaseAPIClient, APIResponse } from '../../core/client.js';
 
 // TMDb Models
 export interface TMDbImage {
@@ -108,7 +108,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Initialize TMDb client
-   * 
+   *
    * @param apiKey TMDb API key (v3 auth)
    * @param options Client options
    */
@@ -133,7 +133,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Search for TV shows including anime
-   * 
+   *
    * @param query Search query
    * @param page Results page (default 1)
    * @returns TV search results
@@ -161,7 +161,7 @@ export class TMDbClient extends BaseAPIClient {
   /**
    * Search for anime using TMDb
    * This is a specialized search that tries to filter for anime content
-   * 
+   *
    * @param query Search query
    * @param page Results page (default 1)
    * @returns TV search results filtered for likely anime content
@@ -169,12 +169,12 @@ export class TMDbClient extends BaseAPIClient {
   public async searchAnime(query: string, page: number = 1): Promise<APIResponse<SearchResult>> {
     // First, do a general search
     const response = await this.searchTV(`${query} anime`, page);
-    
+
     if (!response.data || !response.data.results) {
       return response;
     }
 
-    // Filter results to likely anime (this is an approximation since TMDb doesn't 
+    // Filter results to likely anime (this is an approximation since TMDb doesn't
     // have a dedicated anime filter)
     // We look for Japanese origin or specific keywords in the overview
     const animeResults = response.data.results.filter(show => {
@@ -182,19 +182,19 @@ export class TMDbClient extends BaseAPIClient {
       if (show.origin_country.includes('JP')) {
         return true;
       }
-      
+
       // Check for anime-related terms in title or overview
       const overview = show.overview.toLowerCase();
       const name = show.name.toLowerCase();
       const originalName = show.original_name.toLowerCase();
-      
+
       const animeTerms = ['anime', 'manga', 'japanese animation'];
-      
-      return animeTerms.some(term => 
+
+      return animeTerms.some(term =>
         overview.includes(term) || name.includes(term) || originalName.includes(term)
       );
     });
-    
+
     // Return filtered results
     return {
       ...response,
@@ -207,7 +207,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Get detailed information about a TV show
-   * 
+   *
    * @param tvId TMDb TV show ID
    * @returns Detailed TV show data
    */
@@ -231,7 +231,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Get videos (trailers, etc.) for a TV show
-   * 
+   *
    * @param tvId TMDb TV show ID
    * @returns Videos data including trailers
    */
@@ -254,36 +254,36 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Get a direct link to the trailer for a TV show
-   * 
+   *
    * @param tvId TMDb TV show ID
    * @returns URL to the trailer (YouTube) if available, null otherwise
    */
   public async getTrailerUrl(tvId: number): Promise<string | null> {
     try {
       const response = await this.getVideos(tvId);
-      
+
       if (!response.data || !response.data.results || response.data.results.length === 0) {
         return null;
       }
-      
+
       // Find trailer videos (prefer official trailers first)
       const videos = response.data.results;
-      
+
       // Only look at YouTube videos since that's what we can embed easily
       const youtubeVideos = videos.filter(video => video.site.toLowerCase() === 'youtube');
-      
+
       if (youtubeVideos.length === 0) {
         return null;
       }
-      
+
       // Find official trailers first
-      const trailers = youtubeVideos.filter(video => 
+      const trailers = youtubeVideos.filter(video =>
         video.type.toLowerCase() === 'trailer' || video.name.toLowerCase().includes('trailer')
       );
-      
+
       // If we have trailers, return the first one, otherwise just return the first video
       const video = trailers.length > 0 ? trailers[0] : youtubeVideos[0];
-      
+
       return `https://www.youtube.com/watch?v=${video.key}`;
     } catch (error) {
       console.error('Error getting trailer:', error);
@@ -293,7 +293,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Discover top-rated anime TV shows
-   * 
+   *
    * @param page Results page (default 1)
    * @returns Discover results filtered for likely anime content
    */
@@ -318,7 +318,7 @@ export class TMDbClient extends BaseAPIClient {
 
   /**
    * Get TV shows currently airing
-   * 
+   *
    * @param page Results page (default 1)
    * @returns Currently airing TV shows
    */

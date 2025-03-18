@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "description": "Psychological anime recommendation system",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "jest",
     "start": "./start-ani-sage.sh",
-    "start-api": "ts-node --transpileOnly api/server.ts",
+    "start-api": "NODE_OPTIONS='--loader ts-node/esm' node api/server.ts",
     "demo": "ts-node api-integration-demo.ts",
     "api-demo": "ts-node api/demo.ts",
     "recommendation-demo": "ts-node recommendation-demo.ts",
@@ -19,6 +20,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server-github": "^2025.1.23",
+    "@neondatabase/serverless": "^0.10.4",
+    "@upstash/redis": "^1.34.5",
     "axios": "^1.6.7",
     "dotenv": "^16.4.5",
     "node-cache": "^5.1.2"
@@ -31,6 +34,6 @@
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "wrangler": "^3.28.1"
+    "wrangler": "^4.0.0"
   }
 }

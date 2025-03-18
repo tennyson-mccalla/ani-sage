@@ -55,3 +55,4 @@ Thumbs.db
 
 # Claude MCP
 .claude-mcp/
+.vercel

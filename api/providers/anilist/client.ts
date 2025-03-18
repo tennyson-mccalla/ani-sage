@@ -1,4 +1,4 @@
-import { BaseAPIClient, APIResponse } from '../../core/client';
+import { BaseAPIClient, APIResponse } from '../../core/client.js';
 
 // AniList Models
 export interface AnimeTitle {
@@ -71,7 +71,7 @@ export interface UserInfo {
 
 /**
  * AniList API client
- * 
+ *
  * Provides access to the AniList GraphQL API for anime data
  */
 export class AniListClient extends BaseAPIClient {
@@ -79,7 +79,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Initialize the AniList client
-   * 
+   *
    * @param accessToken Optional OAuth access token
    * @param options Client configuration options
    */
@@ -97,7 +97,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get headers with authentication if available
-   * 
+   *
    * @returns Headers object with authentication if token is set
    */
   private getHeaders(): Record<string, string> {
@@ -115,7 +115,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Make a GraphQL request to the AniList API
-   * 
+   *
    * @param query GraphQL query string
    * @param variables Variables for the GraphQL query
    * @returns API response with data or error
@@ -137,7 +137,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Search for anime by title
-   * 
+   *
    * @param query Search query string
    * @param limit Maximum number of results (default 10, max 50)
    * @returns API response with array of anime matching the search
@@ -189,7 +189,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get detailed information about a specific anime
-   * 
+   *
    * @param animeId AniList anime ID
    * @returns API response with detailed anime information
    */
@@ -250,7 +250,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get a user's anime list
-   * 
+   *
    * @param username AniList username
    * @param status Optional filter by status
    * @param limit Maximum number of results
@@ -302,7 +302,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Update anime status in user's list
-   * 
+   *
    * @param mediaId AniList media ID
    * @param status Status to set
    * @param score Optional score (0-10)
@@ -343,7 +343,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Set or update the access token
-   * 
+   *
    * @param accessToken OAuth access token
    */
   public setAuthToken(accessToken: string): void {
@@ -355,7 +355,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get user information
-   * 
+   *
    * @param username AniList username
    * @returns API response with user information
    */
@@ -399,7 +399,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get anime from a specific season
-   * 
+   *
    * @param year The year of the season
    * @param season The season (WINTER, SPRING, SUMMER, FALL)
    * @param sortBy Sort order for results (default: POPULARITY_DESC)
@@ -478,7 +478,7 @@ export class AniListClient extends BaseAPIClient {
 
   /**
    * Get currently airing anime
-   * 
+   *
    * @param limit Maximum number of results (default: 50)
    * @returns API response with currently airing anime
    */
@@ -539,10 +539,10 @@ export class AniListClient extends BaseAPIClient {
 
     return response as APIResponse<AnimeDetails[]>;
   }
-  
+
   /**
    * Get popular anime
-   * 
+   *
    * @param limit Maximum number of results (default: 50)
    * @param page Page number for pagination (default: 1)
    * @returns API response with popular anime
@@ -604,10 +604,10 @@ export class AniListClient extends BaseAPIClient {
 
     return response as APIResponse<AnimeDetails[]>;
   }
-  
+
   /**
    * Get top-rated anime
-   * 
+   *
    * @param limit Maximum number of results (default: 50)
    * @param page Page number for pagination (default: 1)
    * @returns API response with top-rated anime

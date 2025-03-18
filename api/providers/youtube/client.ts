@@ -6,7 +6,7 @@
  * YouTube API key with quota available.
  */
 
-import { BaseAPIClient, APIResponse } from '../../core/client';
+import { BaseAPIClient, APIResponse } from '../../core/client.js';
 
 // YouTube Models
 export interface VideoThumbnail {
@@ -43,7 +43,7 @@ export class YouTubeClient extends BaseAPIClient {
 
   /**
    * Initialize YouTube client with API key
-   * 
+   *
    * @param apiKey YouTube Data API key
    * @param options Client configuration options
    */
@@ -64,7 +64,7 @@ export class YouTubeClient extends BaseAPIClient {
 
   /**
    * Handle YouTube API response and check for quota errors
-   * 
+   *
    * @param response API response to check
    * @throws Error if quota is exceeded
    */
@@ -79,11 +79,11 @@ export class YouTubeClient extends BaseAPIClient {
           retryAfter?: number;
         };
         error.statusCode = 429; // Use 429 to trigger rate limit handling
-        
+
         // Set retry-after to a long time (4 hours) to prevent further quota usage
         // This isn't perfect since quota resets at midnight PT, but it's a reasonable fallback
         error.retryAfter = 4 * 60 * 60; // 4 hours in seconds
-        
+
         throw error;
       }
     }
@@ -92,7 +92,7 @@ export class YouTubeClient extends BaseAPIClient {
 
   /**
    * Search for videos on YouTube
-   * 
+   *
    * @param query Search query string
    * @param maxResults Maximum number of results (default 10, max 50)
    * @param type Type of results (default 'video')
@@ -143,7 +143,7 @@ export class YouTubeClient extends BaseAPIClient {
 
   /**
    * Search for anime trailers on YouTube
-   * 
+   *
    * @param animeTitle Anime title to search for
    * @param maxResults Maximum number of results (default 5)
    * @returns API response with search results
@@ -164,7 +164,7 @@ export class YouTubeClient extends BaseAPIClient {
 
   /**
    * Get detailed information about a specific video
-   * 
+   *
    * @param videoId YouTube video ID
    * @param part Parts to include in response (default 'snippet,statistics')
    * @returns API response with video details

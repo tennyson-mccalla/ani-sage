@@ -1,14 +1,15 @@
 /**
  * Ani-Sage API Server
- * 
+ *
  * This file serves as the entry point for the API server.
  */
 
 import * as http from 'http';
 import * as url from 'url';
 import dotenv from 'dotenv';
-import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter';
-import { createApiAdapter } from './index';
+import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter.js';
+import { createApiAdapter } from './index.js';
+import { questions } from '../question-bank.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,18 +27,18 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
     return;
   }
-  
+
   // Parse the URL
   const parsedUrl = url.parse(req.url || '', true);
   const pathname = parsedUrl.pathname || '';
-  
+
   // API routing
   if (pathname === '/api/v1/session') {
     // Initialize or get user session
@@ -68,7 +69,7 @@ const server = http.createServer(async (req, res) => {
 async function handleSession(req: http.IncomingMessage, res: http.ServerResponse) {
   const sessionId = `session_${Date.now()}`;
   sessions[sessionId] = { created: new Date().toISOString() };
-  
+
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     sessionId,
@@ -84,12 +85,9 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
     // Parse the query parameters
     const parsedUrl = url.parse(req.url || '', true);
     const { count = 5, stage, sessionId } = parsedUrl.query;
-    
+
     console.log(`Getting questions for session ${sessionId}, stage ${stage}, count ${count}`);
-    
-    // Import the full question bank from the advanced implementation
-    const { questions } = require('../question-bank.js');
-    
+
     // Create empty user profile for new users
     if (!profiles[sessionId as string]) {
       profiles[sessionId as string] = {
@@ -129,11 +127,11 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
         answeredQuestions: []
       };
     }
-    
+
     // Get user profile for question selection
     const userProfile = profiles[sessionId as string];
     const answeredQuestionsIds = userProfile.answeredQuestions || [];
-    
+
     // Filter questions by stage if specified
     let availableQuestions: any[] = questions;
     if (stage) {
@@ -141,71 +139,71 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
       availableQuestions = questions.filter((q: any) => q.stage === stageNum);
       console.log(`Filtered to ${availableQuestions.length} questions for stage ${stageNum}`);
     }
-    
+
     // Filter out questions that have already been answered
     availableQuestions = availableQuestions.filter((q: any) => !answeredQuestionsIds.includes(q.id));
     console.log(`${availableQuestions.length} questions available after filtering answered questions`);
-    
+
     // If we have a user profile with dimensions and confidences, we can use it to select questions
     // targeting dimensions with low confidence
     let selectedQuestions: any[] = [];
-    
+
     if (userProfile && userProfile.confidences) {
       // Sort dimensions by confidence ascending
       const sortedDimensions = Object.entries(userProfile.confidences)
-        .map(([dimension, confidence]) => ({ 
-          dimension, 
-          confidence: confidence as number 
+        .map(([dimension, confidence]) => ({
+          dimension,
+          confidence: confidence as number
         }))
         .sort((a, b) => (a.confidence as number) - (b.confidence as number));
-      
+
       // Target the dimensions with lowest confidence
       const targetDimensions = sortedDimensions
         .slice(0, 3)
         .map(d => d.dimension);
-      
+
       console.log(`Targeting dimensions with lowest confidence: ${targetDimensions.join(', ')}`);
-      
+
       // Find questions that target these dimensions
-      const targetingQuestions = availableQuestions.filter((q: any) => 
+      const targetingQuestions = availableQuestions.filter((q: any) =>
         q.targetDimensions && q.targetDimensions.some((d: string) => targetDimensions.includes(d))
       );
-      
+
       if (targetingQuestions.length > 0) {
         // Select questions targeting low-confidence dimensions
         while (selectedQuestions.length < Math.min(Number(count), targetingQuestions.length)) {
           // Pick a random question from targeting questions
           const randomIndex = Math.floor(Math.random() * targetingQuestions.length);
           const question = targetingQuestions[randomIndex];
-          
+
           // Only add if not already selected
           if (!selectedQuestions.find(q => q.id === question.id)) {
             selectedQuestions.push(question);
           }
-          
+
           // Remove from targeting questions to avoid duplicates
           targetingQuestions.splice(randomIndex, 1);
         }
       }
     }
-    
+
     // If we don't have enough questions yet, add random ones
     while (selectedQuestions.length < Math.min(Number(count), availableQuestions.length)) {
       // Pick a random question
       const randomIndex = Math.floor(Math.random() * availableQuestions.length);
       const question = availableQuestions[randomIndex];
-      
+
       // Only add if not already selected
       if (!selectedQuestions.find((q: any) => q.id === question.id)) {
         selectedQuestions.push(question);
       }
-      
+
       // Remove from available questions to avoid duplicates
       availableQuestions.splice(randomIndex, 1);
     }
-    
+
     console.log(`Selected ${selectedQuestions.length} questions`);
-    
+
     // Format questions for the frontend by cleaning up irrelevant fields
     const formattedQuestions = selectedQuestions.map((q: any) => ({
       id: q.id,
@@ -220,14 +218,14 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
       })),
       stage: q.stage
     }));
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ questions: formattedQuestions }));
   } catch (error) {
     console.error('Error getting questions:', error);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'server_error', 
+    res.end(JSON.stringify({
+      error: 'server_error',
       message: 'Error retrieving questions',
       details: String(error)
     }));
@@ -242,35 +240,32 @@ async function handleSubmitAnswer(req: http.IncomingMessage, res: http.ServerRes
     req.on('data', chunk => {
       body += chunk.toString();
     });
-    
+
     await new Promise<void>((resolve, reject) => {
       req.on('end', () => resolve());
       req.on('error', reject);
     });
-    
+
     const data = JSON.parse(body);
     const { optionId, sessionId } = data;
-    
+
     // Parse the question ID from the URL
     const questionId = pathname.split('/')[4];
-    
+
     console.log(`Processing answer for question ${questionId}, option ${optionId}, session ${sessionId}`);
-    
-    // Load the question bank
-    const { questions } = require('../question-bank.js');
-    
+
     // Find the question
     const question = questions.find((q: any) => q.id === questionId);
     if (!question) {
       throw new Error(`Question ${questionId} not found`);
     }
-    
+
     // Find the selected option
     const option = question.options.find((o: any) => o.id === optionId);
     if (!option) {
       throw new Error(`Option ${optionId} not found for question ${questionId}`);
     }
-    
+
     // Make sure we have a profile for this user
     if (!profiles[sessionId]) {
       profiles[sessionId] = {
@@ -310,51 +305,51 @@ async function handleSubmitAnswer(req: http.IncomingMessage, res: http.ServerRes
         answeredQuestions: []
       };
     }
-    
+
     // Get user profile
     const userProfile = profiles[sessionId];
-    
+
     // Update the profile with Bayesian update based on option mappings
     if (option.mappings && option.mappings.length > 0) {
       // For each dimension mapping in the option
       for (const mapping of option.mappings) {
         const { dimension, value, confidence } = mapping;
-        
+
         if (userProfile.dimensions && dimension in userProfile.dimensions) {
           // Current belief and confidence
           const currentValue = userProfile.dimensions[dimension];
           const currentConfidence = userProfile.confidences[dimension] || 0.1;
-          
+
           // Bayesian update formula:
           // new_value = (current_value * current_confidence + new_value * new_confidence) / (current_confidence + new_confidence)
           // new_confidence = current_confidence + new_confidence
           const newConfidence = Math.min(1.0, currentConfidence + (confidence || 0.1));
           const newValue = (currentValue * currentConfidence + value * (confidence || 0.1)) / newConfidence;
-          
+
           // Update profile
           userProfile.dimensions[dimension] = newValue;
           userProfile.confidences[dimension] = newConfidence;
-          
+
           console.log(`Updated dimension ${dimension}: ${currentValue.toFixed(2)} -> ${newValue.toFixed(2)}, confidence: ${currentConfidence.toFixed(2)} -> ${newConfidence.toFixed(2)}`);
         }
       }
     }
-    
+
     // Mark question as answered
     if (!userProfile.answeredQuestions.includes(questionId)) {
       userProfile.answeredQuestions.push(questionId);
     }
-    
+
     // Update the profile in storage
     profiles[sessionId] = userProfile;
-    
+
     // Decide on next action
     let nextAction = 'more_questions';
     if (userProfile.answeredQuestions.length >= 5) {
       // If they've answered at least 5 questions, they can get recommendations
       nextAction = 'recommendations';
     }
-    
+
     // Return success
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -370,8 +365,8 @@ async function handleSubmitAnswer(req: http.IncomingMessage, res: http.ServerRes
   } catch (error) {
     console.error('Error processing answer:', error);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'server_error', 
+    res.end(JSON.stringify({
+      error: 'server_error',
       message: 'Error processing answer',
       details: String(error)
     }));
@@ -384,9 +379,9 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
     // Parse the query parameters
     const parsedUrl = url.parse(req.url || '', true);
     const { sessionId } = parsedUrl.query;
-    
+
     console.log(`Getting profile for session ${sessionId}`);
-    
+
     // If no sessionId, we can't get a profile
     if (!sessionId || !profiles[sessionId as string]) {
       // Return a default profile
@@ -426,29 +421,29 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
         answeredQuestions: [],
         suggestedAdjustments: []
       };
-      
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(defaultProfile));
       return;
     }
-    
+
     // Get the actual user profile
     const userProfile = profiles[sessionId as string];
-    
+
     // Generate suggested adjustments based on confidence
     const suggestedAdjustments = [];
-    
+
     // Find dimensions with highest confidence where the value is notably different from default
     for (const [dimension, value] of Object.entries(userProfile.dimensions)) {
-      const confidence = userProfile.confidences ? 
+      const confidence = userProfile.confidences ?
         (userProfile.confidences as Record<string, number>)[dimension] || 0 : 0;
-      
+
       // Only suggest for high-confidence dimensions (> 0.5)
       if (confidence > 0.5) {
         // For dimensions with 0-10 scale, default is 5
-        if (dimension !== 'emotionalValence' && dimension !== 'fantasyRealism' && 
+        if (dimension !== 'emotionalValence' && dimension !== 'fantasyRealism' &&
             dimension !== 'intellectualEmotional' && dimension !== 'noveltyFamiliarity') {
-          
+
           // If value is significantly different from default (5)
           const numValue = Number(value);
           const deviation = Math.abs(numValue - 5);
@@ -469,14 +464,14 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
           const numValue = Number(value);
           const deviation = Math.abs(numValue);
           if (deviation > 2) {
-            const explanation = dimension === 'emotionalValence' ? 
+            const explanation = dimension === 'emotionalValence' ?
               `You appear to prefer ${numValue > 0 ? 'more positive' : 'more negative'} emotional tones in stories.` :
               dimension === 'fantasyRealism' ?
               `You appear to prefer ${numValue > 0 ? 'more fantastical' : 'more realistic'} stories.` :
               dimension === 'intellectualEmotional' ?
               `You engage with stories more ${numValue > 0 ? 'intellectually' : 'emotionally'}.` :
               `You prefer ${numValue > 0 ? 'newer, unfamiliar' : 'familiar, established'} content.`;
-              
+
             suggestedAdjustments.push({
               dimension,
               explanation,
@@ -488,11 +483,11 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
         }
       }
     }
-    
+
     // Sort by confidence descending and limit to top 3
     suggestedAdjustments.sort((a, b) => b.confidence - a.confidence);
     const topAdjustments = suggestedAdjustments.slice(0, 3);
-    
+
     // Return the profile with suggested adjustments
     const response = {
       dimensions: userProfile.dimensions,
@@ -500,14 +495,14 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
       answeredQuestions: userProfile.answeredQuestions,
       suggestedAdjustments: topAdjustments
     };
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(response));
   } catch (error) {
     console.error('Error getting user profile:', error);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'server_error', 
+    res.end(JSON.stringify({
+      error: 'server_error',
       message: 'Error retrieving user profile',
       details: String(error)
     }));
@@ -518,7 +513,7 @@ async function handleGetProfile(req: http.IncomingMessage, res: http.ServerRespo
 function formatDimensionName(dimension: string): string {
   // Convert camelCase to space-separated words
   const formatted = dimension.replace(/([A-Z])/g, ' $1');
-  
+
   // Capitalize the first letter
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
@@ -529,9 +524,9 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
     // Parse the query parameters
     const parsedUrl = url.parse(req.url || '', true);
     const { sessionId } = parsedUrl.query;
-    
+
     console.log(`Getting recommendations for session ${sessionId}`);
-    
+
     // Get user profile or use default if not found
     const userProfile = profiles[sessionId as string] || {
       dimensions: {
@@ -551,28 +546,28 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         noveltyFamiliarity: 0
       }
     };
-    
+
     console.log('Fetching anime from API using psychological profile...');
-    
+
     // Get top anime from API
     let animeList;
     try {
       // Try to get popular anime
       console.log('Fetching anime list...');
       animeList = await apiAdapter.getPopularAnime(10, 1);
-      
+
       // If no anime found, try seasonal
       if (!animeList || animeList.length === 0) {
         throw new Error('No anime found from popular endpoint');
       }
     } catch (err) {
       console.error('Failed to get popular anime, falling back to seasonal anime', err);
-      
+
       // Fallback to seasonal anime if popular anime fails
       try {
         const currentDate = new Date();
         const year = currentDate.getFullYear();
-        
+
         // Determine current season
         const month = currentDate.getMonth() + 1;
         let season;
@@ -580,24 +575,24 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         else if (month >= 4 && month <= 6) season = 'spring';
         else if (month >= 7 && month <= 9) season = 'summer';
         else season = 'fall';
-        
+
         console.log(`Fetching seasonal anime for ${season} ${year}...`);
         animeList = await apiAdapter.getSeasonalAnime(year, season, 10);
-        
+
         // If no anime found, use hardcoded
         if (!animeList || animeList.length === 0) {
           throw new Error('No anime found from seasonal endpoint');
         }
       } catch (err2) {
         console.error('Failed to get seasonal anime, using hardcoded fallback', err2);
-        
+
         // Fallback to hardcoded data if all API calls fail
         animeList = [
           {
             id: 1,
             title: 'Fullmetal Alchemist: Brotherhood',
             alternativeTitles: [],
-            image: { 
+            image: {
               medium: 'https://placehold.co/300x450/25163c/ffffff?text=Fullmetal+Alchemist',
               large: 'https://placehold.co/300x450/25163c/ffffff?text=Fullmetal+Alchemist'
             },
@@ -635,7 +630,7 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         ];
       }
     }
-    
+
     // Assign psychological attributes to each anime based on metadata
     console.log('Mapping anime to psychological attributes...');
     const animeWithAttributes = animeList.map(anime => {
@@ -645,70 +640,70 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         attributes = apiAdapter.inferAnimeAttributes(anime);
       } catch (error) {
         console.error(`Error inferring attributes for anime ${anime.id}:`, error);
-        
+
         // Default attributes based on genres if inference fails
         attributes = inferAttributesFromGenres(anime.genres || []);
       }
-      
+
       return {
         anime,
         attributes
       };
     });
-    
+
     // Score each anime based on match with user profile
     console.log('Calculating match scores based on psychological profile...');
     const scoredAnime = animeWithAttributes.map(({ anime, attributes }) => {
       // Calculate match score as weighted Euclidean distance (lower = better match)
       let distanceSquared = 0;
       let totalWeight = 0;
-      
+
       // Count how many dimensions we actually compared
       let dimensionsCompared = 0;
-      
+
       // For each dimension in the user profile, compare with anime attributes
       for (const dimension of Object.keys(userProfile.dimensions)) {
         if (dimension in attributes && dimension in userProfile.dimensions) {
           // Get the values to compare
           const userValue = (userProfile.dimensions as Record<string, number>)[dimension];
           const animeValue = (attributes as Record<string, number>)[dimension];
-          
+
           // Get confidence as weight (higher confidence = more important)
-          const confidence = userProfile.confidences ? 
+          const confidence = userProfile.confidences ?
             (userProfile.confidences as Record<string, number>)[dimension] || 0.5 : 0.5;
           const weight = confidence;
-          
+
           // For dimensions with range 0-10
           if (dimension !== 'emotionalValence' && dimension !== 'fantasyRealism' &&
               dimension !== 'intellectualEmotional' && dimension !== 'noveltyFamiliarity') {
             // Calculate squared difference, normalized to 0-1 range
             const diff = (animeValue - userValue) / 10;
             distanceSquared += diff * diff * weight;
-          } 
+          }
           // For dimensions with range -5 to 5
           else {
             // Calculate squared difference, normalized to 0-1 range
             const diff = (animeValue - userValue) / 10;
             distanceSquared += diff * diff * weight;
           }
-          
+
           totalWeight += weight;
           dimensionsCompared++;
         }
       }
-      
+
       // Scale by number of dimensions compared to avoid bias
       if (dimensionsCompared > 0 && totalWeight > 0) {
         distanceSquared = distanceSquared / totalWeight;
       }
-      
+
       // Convert distance to score (0-10 scale, higher is better match)
       // Using an exponential decay function: score = 10 * e^(-distance)
       const matchScore = Math.round((10 * Math.exp(-Math.sqrt(distanceSquared))) * 10) / 10;
-      
+
       // Generate match reasons based on closest attribute matches
       const matchReasons = generateMatchReasons(userProfile.dimensions, attributes);
-      
+
       return {
         anime,
         attributes,
@@ -716,32 +711,32 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         matchReasons
       };
     });
-    
+
     // Sort by match score (highest first)
     scoredAnime.sort((a, b) => b.matchScore - a.matchScore);
-    
+
     // Take top matches (up to 5)
     const topMatches = scoredAnime.slice(0, 5);
-    
+
     // Enrich top matches with trailers if possible
     console.log('Enriching recommendations with trailers...');
     const enrichedRecommendations = await Promise.all(topMatches.map(async ({ anime, matchScore, matchReasons }) => {
       try {
         const enrichedAnime = await apiAdapter.enrichWithTrailer(anime);
-        
+
         // Extract YouTube ID from trailer URL
         let youtubeTrailerId = null;
         if (enrichedAnime.trailer) {
           const match = enrichedAnime.trailer.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
           youtubeTrailerId = match ? match[1] : null;
         }
-        
+
         // Format for the response
         return {
           id: String(enrichedAnime.id),
           title: enrichedAnime.title,
-          imageUrls: { 
-            poster: enrichedAnime.image.large || enrichedAnime.image.medium || 
+          imageUrls: {
+            poster: enrichedAnime.image.large || enrichedAnime.image.medium ||
                    `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(enrichedAnime.title)}`
           },
           genres: enrichedAnime.genres || [],
@@ -755,13 +750,13 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         };
       } catch (error) {
         console.error(`Error enriching anime ${anime.id}:`, error);
-        
+
         // Return non-enriched version if enrichment fails
         return {
           id: String(anime.id),
           title: anime.title,
-          imageUrls: { 
-            poster: anime.image.large || anime.image.medium || 
+          imageUrls: {
+            poster: anime.image.large || anime.image.medium ||
                    `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(anime.title)}`
           },
           genres: anime.genres || [],
@@ -774,16 +769,16 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         };
       }
     }));
-    
+
     console.log(`Successfully processed ${enrichedRecommendations.length} personalized anime recommendations`);
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ recommendations: enrichedRecommendations }));
   } catch (error) {
     console.error('Error getting recommendations:', error);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'server_error', 
+    res.end(JSON.stringify({
+      error: 'server_error',
       message: 'Error getting recommendations',
       details: String(error)
     }));
@@ -795,11 +790,11 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
  */
 function generateMatchReasons(userDimensions: Record<string, number>, animeAttributes: Record<string, number>): {dimension: string, strength: number, explanation: string}[] {
   const reasons: {dimension: string, strength: number, explanation: string}[] = [];
-  
+
   // For visual dimensions
   const userVisualComplexity = userDimensions.visualComplexity ?? 5;
   const animeVisualComplexity = animeAttributes.visualComplexity ?? 5;
-  
+
   if (Math.abs(userVisualComplexity - animeVisualComplexity) <= 2) {
     const strength = 1 - Math.abs(userVisualComplexity - animeVisualComplexity) / 10;
     if (animeVisualComplexity >= 7) {
@@ -822,11 +817,11 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // For narrative dimensions
   const userNarrativeComplexity = userDimensions.narrativeComplexity ?? 5;
   const animeNarrativeComplexity = animeAttributes.narrativeComplexity ?? 5;
-  
+
   if (Math.abs(userNarrativeComplexity - animeNarrativeComplexity) <= 2) {
     const strength = 1 - Math.abs(userNarrativeComplexity - animeNarrativeComplexity) / 10;
     if (animeNarrativeComplexity >= 7) {
@@ -843,11 +838,11 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // For character dimensions
   const userCharacterComplexity = userDimensions.characterComplexity ?? 5;
   const animeCharacterComplexity = animeAttributes.characterComplexity ?? 5;
-  
+
   if (Math.abs(userCharacterComplexity - animeCharacterComplexity) <= 2) {
     const strength = 1 - Math.abs(userCharacterComplexity - animeCharacterComplexity) / 10;
     if (animeCharacterComplexity >= 7) {
@@ -864,11 +859,11 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // For emotional dimensions
   const userEmotionalIntensity = userDimensions.emotionalIntensity ?? 5;
   const animeEmotionalIntensity = animeAttributes.emotionalIntensity ?? 5;
-  
+
   if (Math.abs(userEmotionalIntensity - animeEmotionalIntensity) <= 2) {
     const strength = 1 - Math.abs(userEmotionalIntensity - animeEmotionalIntensity) / 10;
     if (animeEmotionalIntensity >= 7) {
@@ -885,11 +880,11 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // For emotional valence
   const userEmotionalValence = userDimensions.emotionalValence ?? 0;
   const animeEmotionalValence = animeAttributes.emotionalValence ?? 0;
-  
+
   if (Math.abs(userEmotionalValence - animeEmotionalValence) <= 2) {
     const strength = 1 - Math.abs(userEmotionalValence - animeEmotionalValence) / 10;
     if (animeEmotionalValence > 2) {
@@ -906,11 +901,11 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // For moral ambiguity
   const userMoralAmbiguity = userDimensions.moralAmbiguity ?? 5;
   const animeMoralAmbiguity = animeAttributes.moralAmbiguity ?? 5;
-  
+
   if (Math.abs(userMoralAmbiguity - animeMoralAmbiguity) <= 2) {
     const strength = 1 - Math.abs(userMoralAmbiguity - animeMoralAmbiguity) / 10;
     if (animeMoralAmbiguity >= 7) {
@@ -927,7 +922,7 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       });
     }
   }
-  
+
   // If we don't have enough reasons yet, add generic ones
   if (reasons.length < 3) {
     // Add generic reasons based on score and popularity
@@ -936,14 +931,14 @@ function generateMatchReasons(userDimensions: Record<string, number>, animeAttri
       strength: 0.7,
       explanation: 'This highly-rated anime has resonated with viewers who share your preferences'
     });
-    
+
     reasons.push({
       dimension: 'general',
       strength: 0.6,
       explanation: 'The overall tone and style should appeal to your sensibilities'
     });
   }
-  
+
   // Sort by strength and return
   reasons.sort((a, b) => b.strength - a.strength);
   return reasons;
@@ -969,78 +964,78 @@ function inferAttributesFromGenres(genres: string[]): Record<string, number> {
     intellectualEmotional: 0,
     noveltyFamiliarity: 0
   };
-  
+
   // Adjust attributes based on genres
   if (genres.includes('Action')) {
     attributes.visualPace = 8;
     attributes.narrativePace = 7;
     attributes.emotionalIntensity = 7;
   }
-  
+
   if (genres.includes('Adventure')) {
     attributes.visualComplexity = 7;
     attributes.narrativePace = 6;
     attributes.emotionalValence = 2;
   }
-  
+
   if (genres.includes('Comedy')) {
     attributes.emotionalValence = 3;
     attributes.plotPredictability = 6;
   }
-  
+
   if (genres.includes('Drama')) {
     attributes.emotionalIntensity = 8;
     attributes.characterComplexity = 7;
     attributes.characterGrowth = 8;
   }
-  
+
   if (genres.includes('Fantasy')) {
     attributes.fantasyRealism = 3;
     attributes.visualComplexity = 7;
   }
-  
+
   if (genres.includes('Horror')) {
     attributes.emotionalValence = -4;
     attributes.emotionalIntensity = 9;
   }
-  
+
   if (genres.includes('Mystery') || genres.includes('Thriller')) {
     attributes.plotPredictability = 3;
     attributes.narrativeComplexity = 8;
     attributes.intellectualEmotional = 2;
   }
-  
+
   if (genres.includes('Psychological')) {
     attributes.narrativeComplexity = 9;
     attributes.characterComplexity = 8;
     attributes.moralAmbiguity = 8;
   }
-  
+
   if (genres.includes('Romance')) {
     attributes.emotionalIntensity = 7;
     attributes.characterComplexity = 6;
     attributes.emotionalValence = 2;
   }
-  
+
   if (genres.includes('Sci-Fi')) {
     attributes.intellectualEmotional = 3;
     attributes.narrativeComplexity = 7;
     attributes.fantasyRealism = 2;
   }
-  
+
   if (genres.includes('Slice of Life')) {
     attributes.visualPace = 3;
     attributes.narrativePace = 3;
     attributes.emotionalIntensity = 5;
     attributes.fantasyRealism = -3;
   }
-  
+
   if (genres.includes('Sports')) {
     attributes.emotionalIntensity = 7;
     attributes.narrativePace = 6;
     attributes.fantasyRealism = -4;
   }
-  
+
   return attributes;
 }
 
@@ -1049,10 +1044,10 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
   try {
     // Parse the anime ID from the URL
     const animeId = pathname.split('/')[4];
-    
+
     // Try to get real anime details
     console.log(`Fetching details for anime ID: ${animeId}`);
-    
+
     let animeDetails;
     try {
       // Convert string ID to numeric ID
@@ -1060,34 +1055,34 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
       if (isNaN(numericId)) {
         throw new Error('Invalid anime ID');
       }
-      
+
       // Get anime details from API
       animeDetails = await apiAdapter.getAnimeDetails(numericId);
-      
+
       // If not found, throw error to use fallback
       if (!animeDetails) {
         throw new Error('Anime not found');
       }
-      
+
       // Enrich with trailer if possible
       animeDetails = await apiAdapter.enrichWithTrailer(animeDetails);
     } catch (error) {
       console.error('Error fetching anime details from API:', error);
-      
+
       // Fallback to hardcoded data if API call fails
       console.log('Using fallback anime details');
       animeDetails = {
         id: parseInt(animeId, 10),
-        title: animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' : 
+        title: animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' :
                animeId === '2' ? 'Steins;Gate' : 'Violet Evergarden',
         alternativeTitles: ['Japanese Title', 'English Title'],
         image: {
           medium: `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(
-            animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' : 
+            animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' :
             animeId === '2' ? 'Steins;Gate' : 'Violet Evergarden'
           )}`,
           large: `https://placehold.co/600x900/25163c/ffffff?text=${encodeURIComponent(
-            animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' : 
+            animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' :
             animeId === '2' ? 'Steins;Gate' : 'Violet Evergarden'
           )}`
         },
@@ -1108,14 +1103,14 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
         }
       };
     }
-    
+
     // Extract YouTube ID from trailer URL
     let youtubeTrailerId = null;
     if (animeDetails.trailer) {
       const match = animeDetails.trailer.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
       youtubeTrailerId = match ? match[1] : null;
     }
-    
+
     // Format response
     const formattedDetails = {
       id: String(animeDetails.id),
@@ -1129,15 +1124,15 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
       rating: animeDetails.score || 8.5,
       popularity: animeDetails.popularity || 90,
       imageUrls: {
-        poster: animeDetails.image?.large || animeDetails.image?.medium || 
+        poster: animeDetails.image?.large || animeDetails.image?.medium ||
                `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`,
         banner: `https://placehold.co/1000x250/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`,
-        thumbnail: animeDetails.image?.medium || 
+        thumbnail: animeDetails.image?.medium ||
                  `https://placehold.co/150x200/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`
       },
       externalIds: {
         ...(animeDetails.externalIds || {}),
-        youtubeTrailerId: youtubeTrailerId || 
+        youtubeTrailerId: youtubeTrailerId ||
                           (animeDetails.externalIds?.youtubeTrailerId || null)
       },
       matchScore: 8 + Math.random() * 2, // Random match score between 8-10
@@ -1173,7 +1168,7 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
         }
       ]
     };
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(formattedDetails));
   } catch (error) {

@@ -5,7 +5,7 @@
 /**
  * Psychological dimension definition
  */
-interface PsychologicalDimension {
+export interface PsychologicalDimension {
   min: number;           // Minimum value on this dimension
   max: number;           // Maximum value on this dimension
   description: string;   // Description of what this dimension represents
@@ -15,7 +15,7 @@ interface PsychologicalDimension {
 /**
  * Complete set of psychological dimensions used in the system
  */
-interface DimensionSet {
+export interface DimensionSet {
   [key: string]: PsychologicalDimension;
 }
 

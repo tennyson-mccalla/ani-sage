@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { Dimension } from '../components/profile/DimensionDisplay';
 import { apiService } from '../services/api';
 
@@ -35,14 +35,39 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<UserContextType['profile']>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isInitializedRef = useRef(false);
+  const isInitializingRef = useRef(false);
 
-  // Load profile on mount
+  // Initialize session on mount
   useEffect(() => {
-    refreshProfile();
-  }, []);
+    const initializeSession = async () => {
+      if (isInitializedRef.current || isInitializingRef.current) {
+        return;
+      }
+
+      try {
+        isInitializingRef.current = true;
+        await apiService.initSession();
+        isInitializedRef.current = true;
+        // After successful initialization, fetch the profile
+        await refreshProfile();
+      } catch (err) {
+        console.error('Error initializing session:', err);
+        setError('Failed to initialize session');
+      } finally {
+        isInitializingRef.current = false;
+      }
+    };
+
+    initializeSession();
+  }, []); // Empty dependency array since we're using refs
 
   // Refresh profile from API
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
+    if (isLoading || !isInitializedRef.current) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -54,10 +79,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading]);
 
   // Update profile with questionnaire answers
-  const updateProfile = async (answers: Record<string, string>) => {
+  const updateProfile = useCallback(async (answers: Record<string, string>) => {
+    if (isLoading) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -70,10 +99,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, refreshProfile]);
 
   // Apply suggested profile adjustments
-  const applyAdjustments = async () => {
+  const applyAdjustments = useCallback(async () => {
+    if (isLoading) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -86,7 +119,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, refreshProfile]);
 
   // Context value
   const value = {

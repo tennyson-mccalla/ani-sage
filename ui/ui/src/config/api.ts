@@ -1,6 +1,6 @@
 /**
  * API Configuration
- * 
+ *
  * This file contains configuration for the API service.
  */
 
@@ -19,7 +19,7 @@ interface ApiConfig {
 
 // Default configuration
 export const apiConfig: ApiConfig = {
-  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1',
+  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   enableMockApi: import.meta.env.VITE_ENABLE_MOCK_API === 'true' || !import.meta.env.VITE_API_BASE_URL,
   timeouts: {
     default: 15000, // 15 seconds

@@ -1,15 +1,15 @@
 /**
  * Anime API Adapter
- * 
+ *
  * This module provides a unified interface for interacting with various anime API providers.
  * It abstracts away the specifics of each provider, allowing the application to seamlessly
  * work with different data sources.
  */
 
-import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/anilist/client';
-import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client';
-import { YouTubeClient } from './providers/youtube/client';
-import { TMDbClient, TVDetails } from './providers/tmdb/client';
+import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/anilist/client.js';
+import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client.js';
+import { YouTubeClient } from './providers/youtube/client.js';
+import { TMDbClient, TVDetails } from './providers/tmdb/client.js';
 
 // Unified anime model that works across different providers
 export interface AnimeTitle {
@@ -76,7 +76,7 @@ export class AnimeApiAdapter {
 
   /**
    * Initialize the API adapter with available clients
-   * 
+   *
    * @param config Configuration for various API providers
    * @param defaultProvider Default provider to use when not specified
    */
@@ -96,7 +96,7 @@ export class AnimeApiAdapter {
         config.mal.accessToken
       );
     }
-    
+
     // Initialize TMDb client if config provided
     if (config.tmdb) {
       this.tmdb = new TMDbClient(
@@ -117,7 +117,7 @@ export class AnimeApiAdapter {
 
   /**
    * Get the client for the specified provider
-   * 
+   *
    * @param provider API provider to use
    * @returns The client for the specified provider
    * @throws Error if the client is not configured
@@ -141,7 +141,7 @@ export class AnimeApiAdapter {
 
   /**
    * Convert AniList anime details to unified model
-   * 
+   *
    * @param anime AniList anime details
    * @returns Unified anime model
    */
@@ -177,7 +177,7 @@ export class AnimeApiAdapter {
 
   /**
    * Convert MAL anime details to unified model
-   * 
+   *
    * @param anime MAL anime details
    * @returns Unified anime model
    */
@@ -211,15 +211,15 @@ export class AnimeApiAdapter {
 
   /**
    * Convert TMDb TV details to unified model
-   * 
+   *
    * @param show TMDb TV details
    * @returns Unified anime model
    */
   private convertTMDbShow(show: TVDetails): AnimeTitle {
     // Extract the year from first_air_date
-    const seasonYear = show.first_air_date ? 
+    const seasonYear = show.first_air_date ?
       parseInt(show.first_air_date.split('-')[0]) : undefined;
-    
+
     // Determine season based on first air date month (approximate)
     let season: string | undefined;
     if (show.first_air_date) {
@@ -235,9 +235,9 @@ export class AnimeApiAdapter {
       title: show.name,
       alternativeTitles: [show.original_name].filter(t => t !== show.name),
       image: {
-        medium: show.poster_path ? 
+        medium: show.poster_path ?
           `https://image.tmdb.org/t/p/w300${show.poster_path}` : undefined,
-        large: show.poster_path ? 
+        large: show.poster_path ?
           `https://image.tmdb.org/t/p/w780${show.poster_path}` : undefined
       },
       synopsis: show.overview,
@@ -255,7 +255,7 @@ export class AnimeApiAdapter {
 
   /**
    * Search for anime by title
-   * 
+   *
    * @param query Search query
    * @param limit Maximum number of results
    * @param provider API provider to use
@@ -280,7 +280,7 @@ export class AnimeApiAdapter {
       } else if (client instanceof TMDbClient) {
         const response = await client.searchAnime(query, 1); // TMDb uses pagination
         if (!response.data || !response.data.results) return [];
-        
+
         // For each search result, get detailed information
         const detailedResults = await Promise.all(
           response.data.results.slice(0, limit).map(async result => {
@@ -289,7 +289,7 @@ export class AnimeApiAdapter {
             return this.convertTMDbShow(detailsResponse.data);
           })
         );
-        
+
         // Filter out any null results
         return detailedResults.filter(anime => anime !== null) as AnimeTitle[];
       }
@@ -302,7 +302,7 @@ export class AnimeApiAdapter {
 
   /**
    * Get detailed information about a specific anime
-   * 
+   *
    * @param animeId Anime ID
    * @param provider API provider to use
    * @returns Detailed anime information
@@ -325,10 +325,10 @@ export class AnimeApiAdapter {
       } else if (client instanceof TMDbClient) {
         const response = await client.getTVDetails(animeId);
         if (!response.data) return null;
-        
+
         // Get the trailer URL for the show
         const animeData = this.convertTMDbShow(response.data);
-        
+
         try {
           const trailerUrl = await client.getTrailerUrl(animeId);
           if (trailerUrl) {
@@ -338,7 +338,7 @@ export class AnimeApiAdapter {
           console.warn('Error getting trailer:', trailerError);
           // Continue without trailer
         }
-        
+
         return animeData;
       }
       return null;
@@ -350,7 +350,7 @@ export class AnimeApiAdapter {
 
   /**
    * Get seasonal anime
-   * 
+   *
    * @param year Year of the season
    * @param season Season (winter, spring, summer, fall)
    * @param limit Maximum number of results
@@ -377,7 +377,7 @@ export class AnimeApiAdapter {
       } else if (client instanceof TMDbClient) {
         // TMDb doesn't have a direct seasonal anime endpoint, but we can use the discover method
         // and then filter by date range to approximate the season
-        
+
         // Convert season to date range
         let startMonth, endMonth;
         switch (season.toLowerCase()) {
@@ -402,30 +402,30 @@ export class AnimeApiAdapter {
             startMonth = '01';
             endMonth = '12';
         }
-        
+
         // Discover anime with Japanese origin in the given season
         const response = await client.discoverAnime(1);
         if (!response.data || !response.data.results) return [];
-        
+
         // Filter results to match the season and year
         const seasonalResults = response.data.results.filter(show => {
           if (!show.first_air_date) return false;
-          
+
           const [showYear, showMonth] = show.first_air_date.split('-');
           return (
-            parseInt(showYear) === year && 
-            parseInt(showMonth) >= parseInt(startMonth) && 
+            parseInt(showYear) === year &&
+            parseInt(showMonth) >= parseInt(startMonth) &&
             parseInt(showMonth) <= parseInt(endMonth)
           );
         });
-        
+
         // Get detailed information for top matches
         const detailedResults = await Promise.all(
           seasonalResults.slice(0, limit).map(async result => {
             const detailsResponse = await client.getTVDetails(result.id);
             if (!detailsResponse.data) return null;
             const animeData = this.convertTMDbShow(detailsResponse.data);
-            
+
             // Try to get trailer
             try {
               const trailerUrl = await client.getTrailerUrl(result.id);
@@ -435,11 +435,11 @@ export class AnimeApiAdapter {
             } catch (error) {
               // Continue without trailer
             }
-            
+
             return animeData;
           })
         );
-        
+
         // Filter out nulls and return results
         return detailedResults.filter(anime => anime !== null) as AnimeTitle[];
       }
@@ -452,7 +452,7 @@ export class AnimeApiAdapter {
 
   /**
    * Get currently airing anime
-   * 
+   *
    * @param limit Maximum number of results
    * @param provider API provider to use
    * @returns Array of currently airing anime
@@ -466,7 +466,7 @@ export class AnimeApiAdapter {
     if ((provider === ApiProvider.MAL || (!provider && this.defaultProvider === ApiProvider.MAL)) && this.mal) {
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-      
+
       // Determine current season
       const month = currentDate.getMonth() + 1;
       let season;
@@ -474,33 +474,33 @@ export class AnimeApiAdapter {
       else if (month >= 4 && month <= 6) season = 'spring';
       else if (month >= 7 && month <= 9) season = 'summer';
       else season = 'fall';
-      
+
       return this.getSeasonalAnime(currentYear, season, limit, ApiProvider.MAL);
     }
-    
+
     // If we're using AniList, we have a direct endpoint
     if ((provider === ApiProvider.ANILIST || (!provider && this.defaultProvider === ApiProvider.ANILIST)) && this.anilist) {
       const response = await this.anilist.getCurrentlyAiring(limit);
       if (!response.data) return [];
       return response.data.map(anime => this.convertAniListAnime(anime));
     }
-    
+
     // For TMDb, we can use the currently airing endpoint
     if ((provider === ApiProvider.TMDB || (!provider && this.defaultProvider === ApiProvider.TMDB)) && this.tmdb) {
       const response = await this.tmdb.getCurrentlyAiring();
-      
+
       if (!response.data || !response.data.results) return [];
-      
+
       // Get detailed information for top matches
       const detailedResults = await Promise.all(
         response.data.results.slice(0, limit).map(async result => {
           // Make sure tmdb is defined
           if (!this.tmdb) return null;
-          
+
           const detailsResponse = await this.tmdb.getTVDetails(result.id);
           if (!detailsResponse.data) return null;
           const animeData = this.convertTMDbShow(detailsResponse.data);
-          
+
           // Try to get trailer
           try {
             // Extra null check for TypeScript
@@ -513,41 +513,41 @@ export class AnimeApiAdapter {
           } catch (error) {
             // Continue without trailer
           }
-          
+
           return animeData;
         })
       );
-      
+
       // Filter out nulls and return results
       return detailedResults.filter(anime => anime !== null) as AnimeTitle[];
     }
-    
+
     return [];
   }
 
   /**
    * Maps AniList anime details to unified format
-   * 
+   *
    * @param anime AniList anime details
    * @returns Unified anime format
    */
   private mapAniListToAnime(anime: AniListAnimeDetails): AnimeTitle {
     return this.convertAniListAnime(anime);
   }
-  
+
   /**
    * Maps MAL anime details to unified format
-   * 
+   *
    * @param anime MAL anime details
    * @returns Unified anime format
    */
   private mapMALToAnime(anime: MALAnimeDetails): AnimeTitle {
     return this.convertMALAnime(anime);
   }
-  
+
   /**
    * Get popular anime with pagination
-   * 
+   *
    * @param limit Maximum number of anime to return
    * @param page Page number for pagination
    * @returns Array of popular anime
@@ -563,11 +563,11 @@ export class AnimeApiAdapter {
             }
           }
           break;
-          
+
         case ApiProvider.MAL:
           if (this.mal) {
             const response = await this.mal.getSeasonalAnime(
-              new Date().getFullYear(), 
+              new Date().getFullYear(),
               this.getCurrentSeason(),
               'popularity',
               limit
@@ -578,21 +578,21 @@ export class AnimeApiAdapter {
           }
           break;
       }
-      
+
       // Fallback to secondary provider
       for (const provider of Object.values(ApiProvider)) {
         if (provider === this.defaultProvider) continue;
-        
+
         if (provider === ApiProvider.ANILIST && this.anilist) {
           const response = await this.anilist.getPopularAnime(limit, page);
           if (response.data) {
             return response.data.map(anime => this.mapAniListToAnime(anime));
           }
         }
-        
+
         if (provider === ApiProvider.MAL && this.mal) {
           const response = await this.mal.getSeasonalAnime(
-            new Date().getFullYear(), 
+            new Date().getFullYear(),
             this.getCurrentSeason(),
             'popularity',
             limit
@@ -602,17 +602,17 @@ export class AnimeApiAdapter {
           }
         }
       }
-      
+
       return [];
     } catch (error) {
       console.error('Error getting popular anime:', error);
       return [];
     }
   }
-  
+
   /**
    * Get top rated anime with pagination
-   * 
+   *
    * @param limit Maximum number of anime to return
    * @param page Page number for pagination
    * @returns Array of top rated anime
@@ -628,11 +628,11 @@ export class AnimeApiAdapter {
             }
           }
           break;
-          
+
         case ApiProvider.MAL:
           if (this.mal) {
             const response = await this.mal.getSeasonalAnime(
-              new Date().getFullYear(), 
+              new Date().getFullYear(),
               this.getCurrentSeason(),
               'anime_score',
               limit
@@ -643,21 +643,21 @@ export class AnimeApiAdapter {
           }
           break;
       }
-      
+
       // Fallback to secondary provider
       for (const provider of Object.values(ApiProvider)) {
         if (provider === this.defaultProvider) continue;
-        
+
         if (provider === ApiProvider.ANILIST && this.anilist) {
           const response = await this.anilist.getTopAnime(limit, page);
           if (response.data) {
             return response.data.map(anime => this.mapAniListToAnime(anime));
           }
         }
-        
+
         if (provider === ApiProvider.MAL && this.mal) {
           const response = await this.mal.getSeasonalAnime(
-            new Date().getFullYear(), 
+            new Date().getFullYear(),
             this.getCurrentSeason(),
             'anime_score',
             limit
@@ -667,23 +667,23 @@ export class AnimeApiAdapter {
           }
         }
       }
-      
+
       return [];
     } catch (error) {
       console.error('Error getting top rated anime:', error);
       return [];
     }
   }
-  
+
   /**
    * Infer psychological attributes for an anime based on metadata
-   * 
+   *
    * @param anime Anime title to infer attributes for
    * @returns Inferred psychological attributes
    */
   public inferAnimeAttributes(anime: AnimeTitle): { [dimension: string]: number } {
     const attributes: { [dimension: string]: number } = {};
-    
+
     // Default middle values
     attributes.visualComplexity = 5;
     attributes.narrativeComplexity = 5;
@@ -694,10 +694,10 @@ export class AnimeApiAdapter {
     attributes.intellectualEmotional = 0;
     attributes.visualPace = 5; // Added missing attribute
     attributes.plotPredictability = 5; // Added missing attribute
-    
+
     // Make sure genres exists before trying to use it
     const genres = anime.genres || [];
-    
+
     // Infer from genres
     if (genres.includes('Slice of Life')) {
       attributes.visualComplexity = 4;
@@ -705,46 +705,46 @@ export class AnimeApiAdapter {
       attributes.emotionalIntensity = 4;
       attributes.emotionalValence = 2;
     }
-    
+
     if (genres.includes('Action')) {
       attributes.visualComplexity = 7;
       attributes.visualPace = 8;
       attributes.emotionalIntensity = 7;
     }
-    
+
     if (genres.includes('Mystery') || genres.includes('Thriller')) {
       attributes.narrativeComplexity = 8;
       attributes.plotPredictability = 3;
       attributes.emotionalIntensity = 7;
     }
-    
+
     if (genres.includes('Psychological')) {
       attributes.narrativeComplexity = 8;
       attributes.characterComplexity = 8;
       attributes.moralAmbiguity = 8;
       attributes.intellectualEmotional = 3;
     }
-    
+
     if (genres.includes('Comedy')) {
       attributes.emotionalValence = 3;
     }
-    
+
     if (genres.includes('Horror')) {
       attributes.emotionalValence = -4;
       attributes.emotionalIntensity = 8;
     }
-    
+
     if (genres.includes('Drama')) {
       attributes.characterComplexity = 7;
       attributes.emotionalIntensity = 7;
     }
-    
+
     if (genres.includes('Romance')) {
       attributes.characterComplexity = 6;
       attributes.emotionalIntensity = 6;
       attributes.emotionalValence = 2;
     }
-    
+
     // Episode count can hint at narrative complexity
     const episodeCount = anime.episodeCount || 0;
     if (episodeCount > 50) {
@@ -752,14 +752,14 @@ export class AnimeApiAdapter {
     } else if (episodeCount <= 13) {
       attributes.narrativeComplexity = Math.max(1, attributes.narrativeComplexity - 1);
     }
-    
+
     // Use score instead of rating since rating property doesn't exist in AnimeTitle interface
     const score = anime.score || 0;
     if (score > 8.5) {
       attributes.narrativeComplexity = Math.min(10, attributes.narrativeComplexity + 1);
       attributes.characterComplexity = Math.min(10, attributes.characterComplexity + 1);
     }
-    
+
     return attributes;
   }
 
@@ -768,16 +768,16 @@ export class AnimeApiAdapter {
    */
   private getCurrentSeason(): string {
     const month = new Date().getMonth();
-    
+
     if (month >= 0 && month <= 2) return 'winter';
     if (month >= 3 && month <= 5) return 'spring';
     if (month >= 6 && month <= 8) return 'summer';
     return 'fall';
   }
-  
+
   /**
    * Extract YouTube video ID from a URL
-   * 
+   *
    * @param url YouTube URL
    * @returns Video ID or null if not found
    */
@@ -785,10 +785,10 @@ export class AnimeApiAdapter {
     const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     return match ? match[1] : null;
   }
-  
+
   /**
    * Search for an anime trailer on YouTube
-   * 
+   *
    * @param animeTitle Anime title
    * @returns YouTube trailer URL if found, null otherwise
    */
@@ -806,13 +806,13 @@ export class AnimeApiAdapter {
 
       // Extract video ID from the first result
       const video = response.data[0];
-      
+
       if (typeof video.id === 'string') {
         return `https://youtube.com/watch?v=${video.id}`;
       } else if (video.id && 'videoId' in video.id) {
         return `https://youtube.com/watch?v=${video.id.videoId}`;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error finding anime trailer:', error);
@@ -822,7 +822,7 @@ export class AnimeApiAdapter {
 
   /**
    * Enrich anime details with trailer information from YouTube
-   * 
+   *
    * @param anime Anime details to enrich
    * @returns Enriched anime details with trailer URL if found
    */
@@ -834,7 +834,7 @@ export class AnimeApiAdapter {
     try {
       // Get trailer URL
       const trailerUrl = await this.getAnimeTrailer(anime.title);
-      
+
       // Create new anime object with trailer information
       return {
         ...anime,

@@ -5,7 +5,7 @@ import { apiConfig } from '../config/api';
 
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: apiConfig.baseUrl,
+  baseURL: `${apiConfig.baseUrl}/api/v1`,
   headers: {
     'Content-Type': 'application/json'
   },
@@ -18,8 +18,36 @@ apiClient.interceptors.request.use(config => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  console.log('Making API request to:', config.url);
+  console.log('Request method:', config.method);
+  console.log('Request headers:', config.headers);
+  console.log('Request data:', config.data);
   return config;
 });
+
+// Add response interceptor to handle errors
+apiClient.interceptors.response.use(
+  response => {
+    console.log('API Response:', response);
+    return response;
+  },
+  error => {
+    console.error('API Error:', error);
+    if (error.config) {
+      console.log('Failed request URL:', error.config.url);
+      console.log('Request method:', error.config.method);
+      console.log('Request headers:', error.config.headers);
+      console.log('Request data:', error.config.data);
+      console.log('Full request config:', error.config);
+    }
+    if (error.response) {
+      console.log('Response status:', error.response.status);
+      console.log('Response headers:', error.response.headers);
+      console.log('Response data:', error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Helper function to convert API dimension data to UI format
 const mapApiDimensionsToUi = (apiDimensions: Record<string, number>): Dimension[] => {
@@ -269,16 +297,16 @@ export const apiService = {
     }
 
     try {
-      // If we have an existing session, include it in the request
-      const params = existingSessionId ? { existingSessionId } : {};
-      const response = await apiClient.get('/session', { params });
+      // Create new session
+      const response = await apiClient.post('/session');
 
       // Store new session ID
-      if (response.data && response.data.sessionId) {
-        localStorage.setItem(apiConfig.sessionStorage.sessionIdKey, response.data.sessionId);
+      if (response.data?.success && response.data?.data?.id) {
+        localStorage.setItem(apiConfig.sessionStorage.sessionIdKey, response.data.data.id);
+        return response.data.data;
+      } else {
+        throw new Error('Invalid session response format');
       }
-
-      return response.data;
     } catch (error) {
       console.error('Error initializing session:', error);
       throw error;
@@ -454,8 +482,84 @@ export const apiService = {
         suggestedAdjustments,
         answeredQuestions: response.data.answeredQuestions || []
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user profile:', error);
+
+      // If profile not found, create a default profile
+      if (error.response?.status === 404) {
+        console.log('Profile not found, creating default profile');
+        const defaultProfile = {
+          dimensions: {
+            visualComplexity: 5,
+            narrativeComplexity: 5,
+            emotionalIntensity: 5,
+            characterComplexity: 5,
+            moralAmbiguity: 5,
+            emotionalValence: 0,
+            intellectualEmotional: 0,
+            fantasyRealism: 0
+          },
+          confidences: {
+            visualComplexity: 0.5,
+            narrativeComplexity: 0.5,
+            emotionalIntensity: 0.5,
+            characterComplexity: 0.5,
+            moralAmbiguity: 0.5,
+            emotionalValence: 0.5,
+            intellectualEmotional: 0.5,
+            fantasyRealism: 0.5
+          }
+        };
+
+        try {
+          const createResponse = await apiClient.post('/profile', defaultProfile, {
+            params: { sessionId }
+          });
+
+          // Only proceed if profile creation was successful
+          if (createResponse.data?.success && createResponse.data?.data) {
+            // Return the newly created profile data directly
+            const dimensions = mapApiDimensionsToUi(createResponse.data.data.dimensions);
+            return {
+              dimensions,
+              suggestedAdjustments: [],
+              answeredQuestions: []
+            };
+          } else {
+            // If profile creation failed, fall back to mock data
+            console.log('Profile creation failed, falling back to mock data');
+            const dimensions = mapApiDimensionsToUi(mockData.profile.dimensions);
+            const suggestedAdjustments = mockData.profile.suggestedAdjustments.map(adj => ({
+              dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase()),
+              explanation: adj.explanation,
+              currentValue: adj.currentValue,
+              suggestedValue: adj.suggestedValue
+            }));
+
+            return {
+              dimensions,
+              suggestedAdjustments,
+              answeredQuestions: []
+            };
+          }
+        } catch (createError) {
+          console.error('Error creating default profile:', createError);
+          // Fall back to mock data if profile creation fails
+          const dimensions = mapApiDimensionsToUi(mockData.profile.dimensions);
+          const suggestedAdjustments = mockData.profile.suggestedAdjustments.map(adj => ({
+            dimension: adj.dimension.replace(/([A-Z])/g, ' $1').replace(/^./, (str: string) => str.toUpperCase()),
+            explanation: adj.explanation,
+            currentValue: adj.currentValue,
+            suggestedValue: adj.suggestedValue
+          }));
+
+          return {
+            dimensions,
+            suggestedAdjustments,
+            answeredQuestions: []
+          };
+        }
+      }
 
       // Fallback to mock data if API call fails
       console.log('Falling back to mock profile data');
