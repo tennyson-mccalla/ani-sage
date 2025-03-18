@@ -105,7 +105,6 @@ export class AniListAdapter implements AnimeApiAdapter {
   private readonly tmdbClient: TMDbClient;
 
   constructor() {
-    // Initialize clients with environment variables
     this.anilistClient = new AniListClient();
     this.malClient = new MALClient(process.env.MAL_CLIENT_ID || '');
     this.tmdbClient = new TMDbClient(process.env.TMDB_API_KEY || '');
@@ -125,120 +124,189 @@ export class AniListAdapter implements AnimeApiAdapter {
 
   public async getAnimeDetails(animeId: number, provider?: ApiProvider): Promise<AnimeTitle | null> {
     const client = this.getClient(provider);
-    if (client instanceof AniListClient) {
-      const anime = await client.getAnimeDetails(animeId);
-      return this.convertAniListAnime(anime);
-    } else if (client instanceof MALClient) {
-      const anime = await client.getAnimeDetails(animeId);
-      return this.convertMALAnime(anime);
-    } else {
-      const show = await client.getTVDetails(animeId);
-      return this.convertTMDbShow(show);
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getAnimeDetails(animeId);
+        if (!response.data) return null;
+        return this.convertAniListAnime(response.data);
+      } else if (client instanceof MALClient) {
+        const response = await client.getAnimeDetails(animeId);
+        if (!response.data) return null;
+        return this.convertMALAnime(response.data);
+      } else {
+        const response = await client.getTVDetails(animeId);
+        if (!response.data) return null;
+        return this.convertTMDbShow(response.data);
+      }
+    } catch (error) {
+      console.error('Error getting anime details:', error);
+      return null;
     }
   }
 
   public async searchAnime(query: string): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const results = await client.searchAnime(query);
-      return results.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const results = await client.searchAnime(query);
-      return results.map(this.convertMALAnime);
-    } else {
-      const results = await client.searchTV(query);
-      return results.map(this.convertTMDbShow);
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.searchAnime(query);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const response = await client.searchAnime(query);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertMALAnime(anime));
+      } else {
+        const response = await client.searchTV(query);
+        if (!response.data?.results) return [];
+        return response.data.results.map(show => this.convertTMDbShow(show));
+      }
+    } catch (error) {
+      console.error('Error searching anime:', error);
+      return [];
     }
   }
 
   public async getRecommendations(params: RecommendationParams): Promise<AnimeTitle[]> {
-    // For now, just return popular anime as recommendations
     return this.getPopularAnime(params.count || 10);
   }
 
   public async enrichWithTrailer(anime: AnimeTitle): Promise<AnimeTitle> {
     if (anime.externalIds?.tmdb) {
       const client = this.getClient(ApiProvider.TMDB);
-      const trailer = await client.getTrailer(anime.externalIds.tmdb);
-      if (trailer) {
-        anime.trailer = trailer;
+      if (client instanceof TMDbClient) {
+        const trailer = await client.getTrailerUrl(anime.externalIds.tmdb);
+        if (trailer) {
+          anime.trailer = trailer;
+        }
       }
     }
     return anime;
   }
 
   public async inferAnimeAttributes(anime: AnimeTitle): Promise<AnimeAttributes> {
-    // TODO: Implement attribute inference
     return {};
   }
 
   public async getAnimeRecommendations(animeId: number): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const recommendations = await client.getAnimeRecommendations(animeId);
-      return recommendations.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const recommendations = await client.getSuggestedAnime();
-      return recommendations.map(this.convertMALAnime);
-    } else {
-      const recommendations = await client.getSimilarShows(animeId);
-      return recommendations.map(this.convertTMDbShow);
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getAnimeRecommendations(animeId);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const response = await client.getSuggestedAnime();
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertMALAnime(anime));
+      } else {
+        const response = await client.getSimilarTV(animeId);
+        if (!response.data?.results) return [];
+        return response.data.results.map(show => this.convertTMDbShow(show));
+      }
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      return [];
     }
   }
 
   public async getSeasonalAnime(year: number, season: string, limit?: number): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const anime = await client.getSeasonalAnime(year, season, limit);
-      return anime.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const anime = await client.getSeasonalAnime(year, season, limit);
-      return anime.map(this.convertMALAnime);
-    } else {
-      // TMDB doesn't have seasonal anime
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getSeasonAnime(year, season, "POPULARITY_DESC", limit);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const response = await client.getSeasonalAnime(year, season, "anime_score", limit);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertMALAnime(anime));
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error('Error getting seasonal anime:', error);
       return [];
     }
   }
 
   public async getCurrentlyAiring(limit?: number): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const anime = await client.getCurrentlyAiring(limit);
-      return anime.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const anime = await client.getCurrentlyAiring(limit);
-      return anime.map(this.convertMALAnime);
-    } else {
-      // TMDB doesn't have currently airing anime
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getCurrentlyAiring(limit);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        let season;
+        if (month >= 1 && month <= 3) season = 'winter';
+        else if (month >= 4 && month <= 6) season = 'spring';
+        else if (month >= 7 && month <= 9) season = 'summer';
+        else season = 'fall';
+
+        return this.getSeasonalAnime(currentYear, season, limit);
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error('Error getting currently airing anime:', error);
       return [];
     }
   }
 
   public async getPopularAnime(limit?: number, page?: number): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const anime = await client.getPopularAnime(limit, page);
-      return anime.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const anime = await client.getPopularAnime(limit, page);
-      return anime.map(this.convertMALAnime);
-    } else {
-      const shows = await client.getPopularShows(limit, page);
-      return shows.map(this.convertTMDbShow);
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getPopularAnime(limit, page);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const response = await client.getSeasonalAnime(
+          new Date().getFullYear(),
+          this.getCurrentSeason(),
+          'popularity',
+          limit
+        );
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertMALAnime(anime));
+      } else {
+        const response = await client.getPopularTV(limit, page);
+        if (!response.data?.results) return [];
+        return response.data.results.map(show => this.convertTMDbShow(show));
+      }
+    } catch (error) {
+      console.error('Error getting popular anime:', error);
+      return [];
     }
   }
 
   public async getTopRatedAnime(limit?: number, page?: number): Promise<AnimeTitle[]> {
     const client = this.getClient();
-    if (client instanceof AniListClient) {
-      const anime = await client.getTopRatedAnime(limit, page);
-      return anime.map(this.convertAniListAnime);
-    } else if (client instanceof MALClient) {
-      const anime = await client.getTopRatedAnime(limit, page);
-      return anime.map(this.convertMALAnime);
-    } else {
-      const shows = await client.getTopRatedShows(limit, page);
-      return shows.map(this.convertTMDbShow);
+    try {
+      if (client instanceof AniListClient) {
+        const response = await client.getTopAnime(limit, page);
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertAniListAnime(anime));
+      } else if (client instanceof MALClient) {
+        const response = await client.getSeasonalAnime(
+          new Date().getFullYear(),
+          this.getCurrentSeason(),
+          'anime_score',
+          limit
+        );
+        if (!response.data) return [];
+        return response.data.map(anime => this.convertMALAnime(anime));
+      } else {
+        const response = await client.getTopRatedTV(limit, page);
+        if (!response.data?.results) return [];
+        return response.data.results.map(show => this.convertTMDbShow(show));
+      }
+    } catch (error) {
+      console.error('Error getting top rated anime:', error);
+      return [];
     }
   }
 

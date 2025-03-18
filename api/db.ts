@@ -24,68 +24,71 @@ const schema = `
 `;
 
 export interface Database {
-  createSession(): Promise<Session>;
+  createProfile(profile: Omit<Profile, 'id'>): Promise<Profile>;
+  getProfile(id: string): Promise<Profile | null>;
+  updateProfile(profile: Profile): Promise<Profile>;
+  getProfileForSession(sessionId: string): Promise<Profile | null>;
+  createSession(session: Omit<Session, 'id'>): Promise<Session>;
   getSession(id: string): Promise<Session | null>;
-  updateSession(id: string, updates: Partial<Session>): Promise<Session>;
-  createProfile(sessionId: string): Promise<Profile>;
-  getProfile(sessionId: string): Promise<Profile | null>;
-  updateProfile(sessionId: string, updates: Partial<Profile>): Promise<Profile>;
+  updateSession(session: Session): Promise<Session>;
 }
 
-class InMemoryDatabase implements Database {
-  private sessions: Map<string, Session> = new Map();
-  private profiles: Map<string, Profile> = new Map();
+export interface Profile {
+  id: string;
+  dimensions: Record<string, number>;
+  confidences: Record<string, number>;
+  answeredQuestions: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  async createSession(): Promise<Session> {
-    const session: Session = {
-      id: Math.random().toString(36).substring(2),
-      currentQuestionIndex: 0,
-      answeredQuestions: [],
-      recommendations: [],
-      startTime: new Date().toISOString(),
-      lastUpdateTime: new Date().toISOString()
-    };
-    this.sessions.set(session.id, session);
-    return session;
+export interface Session {
+  id: string;
+  profileId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class InMemoryDatabase implements Database {
+  private profiles: Map<string, Profile> = new Map();
+  private sessions: Map<string, Session> = new Map();
+
+  async createProfile(profile: Omit<Profile, 'id'>): Promise<Profile> {
+    const id = crypto.randomUUID();
+    const newProfile = { ...profile, id, createdAt: new Date(), updatedAt: new Date() };
+    this.profiles.set(id, newProfile);
+    return newProfile;
+  }
+
+  async getProfile(id: string): Promise<Profile | null> {
+    return this.profiles.get(id) || null;
+  }
+
+  async updateProfile(profile: Profile): Promise<Profile> {
+    this.profiles.set(profile.id, profile);
+    return profile;
+  }
+
+  async getProfileForSession(sessionId: string): Promise<Profile | null> {
+    const session = await this.getSession(sessionId);
+    if (!session) return null;
+    return this.getProfile(session.profileId);
+  }
+
+  async createSession(session: Omit<Session, 'id'>): Promise<Session> {
+    const id = crypto.randomUUID();
+    const newSession = { ...session, id, createdAt: new Date(), updatedAt: new Date() };
+    this.sessions.set(id, newSession);
+    return newSession;
   }
 
   async getSession(id: string): Promise<Session | null> {
     return this.sessions.get(id) || null;
   }
 
-  async updateSession(id: string, updates: Partial<Session>): Promise<Session> {
-    const session = await this.getSession(id);
-    if (!session) {
-      throw new Error(`Session not found: ${id}`);
-    }
-    const updatedSession = { ...session, ...updates };
-    this.sessions.set(id, updatedSession);
-    return updatedSession;
-  }
-
-  async createProfile(sessionId: string): Promise<Profile> {
-    const profile: Profile = {
-      sessionId,
-      dimensions: {},
-      confidence: {},
-      lastUpdateTime: new Date().toISOString()
-    };
-    this.profiles.set(sessionId, profile);
-    return profile;
-  }
-
-  async getProfile(sessionId: string): Promise<Profile | null> {
-    return this.profiles.get(sessionId) || null;
-  }
-
-  async updateProfile(sessionId: string, updates: Partial<Profile>): Promise<Profile> {
-    const profile = await this.getProfile(sessionId);
-    if (!profile) {
-      throw new Error(`Profile not found: ${sessionId}`);
-    }
-    const updatedProfile = { ...profile, ...updates };
-    this.profiles.set(sessionId, updatedProfile);
-    return updatedProfile;
+  async updateSession(session: Session): Promise<Session> {
+    this.sessions.set(session.id, session);
+    return session;
   }
 }
 
