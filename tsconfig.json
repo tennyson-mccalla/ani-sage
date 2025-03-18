@@ -15,7 +15,7 @@
     },
     "allowJs": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "noEmit": false
   },
   "include": [
     "api/**/*.ts",
