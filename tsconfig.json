@@ -15,7 +15,6 @@
     },
     "allowJs": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": [
