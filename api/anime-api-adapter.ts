@@ -158,7 +158,15 @@ export class AniListAdapter implements AnimeApiAdapter {
       } else {
         const response = await client.searchTV(query);
         if (!response.data?.results) return [];
-        return response.data.results.map(show => this.convertTMDbShow(show));
+        // Get detailed information for each search result
+        const detailedResults = await Promise.all(
+          response.data.results.map(async (result: TVSearchResult) => {
+            const detailsResponse = await client.getTVDetails(result.id);
+            if (!detailsResponse.data) return null;
+            return this.convertTMDbShow(detailsResponse.data);
+          })
+        );
+        return detailedResults.filter((anime): anime is AnimeTitle => anime !== null);
       }
     } catch (error) {
       console.error('Error searching anime:', error);
@@ -193,15 +201,22 @@ export class AniListAdapter implements AnimeApiAdapter {
       if (client instanceof AniListClient) {
         const response = await client.getAnimeRecommendations(animeId);
         if (!response.data) return [];
-        return response.data.map(anime => this.convertAniListAnime(anime));
+        return response.data.map((anime: AniListAnimeDetails) => this.convertAniListAnime(anime));
       } else if (client instanceof MALClient) {
         const response = await client.getSuggestedAnime();
         if (!response.data) return [];
-        return response.data.map(anime => this.convertMALAnime(anime));
+        return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getSimilarTV(animeId);
+        const response = await client.getSimilarShows(animeId);
         if (!response.data?.results) return [];
-        return response.data.results.map(show => this.convertTMDbShow(show));
+        const detailedResults = await Promise.all(
+          response.data.results.map(async (result: TVSearchResult) => {
+            const detailsResponse = await client.getTVDetails(result.id);
+            if (!detailsResponse.data) return null;
+            return this.convertTMDbShow(detailsResponse.data);
+          })
+        );
+        return detailedResults.filter((anime): anime is AnimeTitle => anime !== null);
       }
     } catch (error) {
       console.error('Error getting recommendations:', error);
@@ -262,7 +277,7 @@ export class AniListAdapter implements AnimeApiAdapter {
       if (client instanceof AniListClient) {
         const response = await client.getPopularAnime(limit, page);
         if (!response.data) return [];
-        return response.data.map(anime => this.convertAniListAnime(anime));
+        return response.data.map((anime: AniListAnimeDetails) => this.convertAniListAnime(anime));
       } else if (client instanceof MALClient) {
         const response = await client.getSeasonalAnime(
           new Date().getFullYear(),
@@ -271,11 +286,18 @@ export class AniListAdapter implements AnimeApiAdapter {
           limit
         );
         if (!response.data) return [];
-        return response.data.map(anime => this.convertMALAnime(anime));
+        return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getPopularTV(limit, page);
+        const response = await client.getPopularShows(limit, page);
         if (!response.data?.results) return [];
-        return response.data.results.map(show => this.convertTMDbShow(show));
+        const detailedResults = await Promise.all(
+          response.data.results.map(async (result: TVSearchResult) => {
+            const detailsResponse = await client.getTVDetails(result.id);
+            if (!detailsResponse.data) return null;
+            return this.convertTMDbShow(detailsResponse.data);
+          })
+        );
+        return detailedResults.filter((anime): anime is AnimeTitle => anime !== null);
       }
     } catch (error) {
       console.error('Error getting popular anime:', error);
@@ -289,7 +311,7 @@ export class AniListAdapter implements AnimeApiAdapter {
       if (client instanceof AniListClient) {
         const response = await client.getTopAnime(limit, page);
         if (!response.data) return [];
-        return response.data.map(anime => this.convertAniListAnime(anime));
+        return response.data.map((anime: AniListAnimeDetails) => this.convertAniListAnime(anime));
       } else if (client instanceof MALClient) {
         const response = await client.getSeasonalAnime(
           new Date().getFullYear(),
@@ -298,11 +320,18 @@ export class AniListAdapter implements AnimeApiAdapter {
           limit
         );
         if (!response.data) return [];
-        return response.data.map(anime => this.convertMALAnime(anime));
+        return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getTopRatedTV(limit, page);
+        const response = await client.getTopRatedShows(limit, page);
         if (!response.data?.results) return [];
-        return response.data.results.map(show => this.convertTMDbShow(show));
+        const detailedResults = await Promise.all(
+          response.data.results.map(async (result: TVSearchResult) => {
+            const detailsResponse = await client.getTVDetails(result.id);
+            if (!detailsResponse.data) return null;
+            return this.convertTMDbShow(detailsResponse.data);
+          })
+        );
+        return detailedResults.filter((anime): anime is AnimeTitle => anime !== null);
       }
     } catch (error) {
       console.error('Error getting top rated anime:', error);

@@ -1,6 +1,5 @@
 import { Redis } from '@upstash/redis';
 import { neon } from '@neondatabase/serverless';
-import { Profile, Session } from './types';
 
 // Initialize Redis client
 const redis = new Redis({

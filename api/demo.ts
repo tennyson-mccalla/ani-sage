@@ -42,13 +42,14 @@ export async function runApiDemo(apiConfig: {
     const animeId = searchResults[0].id;
     console.log(`Getting details for: ${searchResults[0].title} (ID: ${animeId})`);
 
-    const animeDetails = await apiAdapter.getAnimeDetails(animeId);
+    const animeDetails = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
     if (animeDetails) {
       console.log('Title:', animeDetails.title);
-      console.log('Alternative Titles:', animeDetails.alternativeTitles.join(', '));
-      console.log('Episodes:', animeDetails.episodeCount || 'N/A');
-      console.log('Studios:', animeDetails.studios?.join(', ') || 'N/A');
-      console.log('Synopsis:', animeDetails.synopsis?.substring(0, 150) + '...' || 'N/A');
+      if (animeDetails.alternativeTitles && animeDetails.alternativeTitles.length > 0) {
+        console.log('Alternative Titles:', animeDetails.alternativeTitles.join(', '));
+      }
+      console.log('Score:', animeDetails.score);
+      console.log('Genres:', animeDetails.genres?.join(', '));
 
       // Demo 3: Enrich with trailer
       if (apiConfig.youtube) {
@@ -144,4 +145,22 @@ if (import.meta.url === fileURLToPath(import.meta.url)) {
   runApiDemo(apiConfig).catch(error => {
     console.error('Demo error:', error);
   });
+}
+
+export async function getAnimeDetails(animeId: string): Promise<AnimeTitle | null> {
+  try {
+    const apiAdapter = createApiAdapter();
+    const details = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
+    if (!details) return null;
+
+    // Get alternative titles if available
+    if (details.alternativeTitles && details.alternativeTitles.length > 0) {
+      console.log('Alternative titles:', details.alternativeTitles);
+    }
+
+    return details;
+  } catch (error) {
+    console.error('Error getting anime details:', error);
+    return null;
+  }
 }
