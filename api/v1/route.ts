@@ -556,13 +556,13 @@ async function updateProfileWithAnswer(profile: Profile, questionId: string, sel
 
 // Get recommendations based on profile
 async function getRecommendations(session: Session, count: number = 10): Promise<any[]> {
-  const profile = await getProfileForSession(session);
-  const apiAdapter = createApiAdapter();
+  const profile = await db.getProfileForSession(session.id);
+  if (!profile) {
+    throw new Error('Profile not found for session');
+  }
 
-  const recommendations = await apiAdapter.getRecommendations({
-    dimensions: profile.dimensions,
-    count
-  });
+  const apiAdapter = createApiAdapter();
+  const recommendations = await apiAdapter.getAnimeRecommendations(parseInt(profile.id, 10));
 
   return recommendations;
 }
