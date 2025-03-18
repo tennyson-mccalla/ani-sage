@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AnimeApiAdapter } from '../../anime-api-adapter.js';
-import { createApiAdapter } from '../../index.js';
-import { questions } from '../../question-bank.js';
-import { db, initDatabase } from '../../db.js';
-import { Question, QuestionOption, Profile, Session } from '../../types.js';
+import { AnimeApiAdapter } from '../../anime-api-adapter.ts';
+import { createApiAdapter } from '../../index.ts';
+import { questions } from '../../question-bank.ts';
+import { db, initDatabase } from '../../db.ts';
+import { Question, QuestionOption, Profile, Session } from '../../types.ts';
 
 // Initialize API adapter with configuration
 const apiAdapter = createApiAdapter();
