@@ -7,9 +7,9 @@
 import * as http from 'http';
 import * as url from 'url';
 import dotenv from 'dotenv';
-import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter.js';
-import { createApiAdapter } from './index.js';
-import { questions } from '../question-bank.js';
+import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter';
+import { createApiAdapter } from './index';
+import { questions } from './question-bank';
 
 // Load environment variables
 dotenv.config();

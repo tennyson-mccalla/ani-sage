@@ -5,7 +5,7 @@
  * user preferences and build their psychological profile.
  */
 
-import type { Question, QuestionOption } from './data-models';
+import type { Question, QuestionOption } from './types';
 
 // Initialize the question bank
 const questions = getQuestionBank();
@@ -271,7 +271,7 @@ export function getSampleQuestionById(
  * @returns The next question to ask
  */
 export function selectNextQuestion(
-  userProfile: import('./data-models').UserProfile,
+  userProfile: import('./types').Profile,
   answeredIds: string[] = []
 ): Question | null {
   const allQuestions = getQuestionBank();
