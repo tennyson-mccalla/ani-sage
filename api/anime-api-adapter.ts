@@ -76,6 +76,16 @@ export interface RecommendationParams {
   count?: number;
 }
 
+export interface TVSearchResult {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  first_air_date: string | null;
+  vote_average: number;
+  popularity: number;
+}
+
 export interface AnimeApiAdapter {
   getClient(provider?: ApiProvider): AniListClient | MALClient | TMDbClient;
   convertAniListAnime(anime: AniListAnimeDetails): AnimeTitle;
@@ -207,7 +217,7 @@ export class AniListAdapter implements AnimeApiAdapter {
         if (!response.data) return [];
         return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getSimilarShows(animeId);
+        const response = await client.getSimilarTV(animeId);
         if (!response.data?.results) return [];
         const detailedResults = await Promise.all(
           response.data.results.map(async (result: TVSearchResult) => {
@@ -288,7 +298,7 @@ export class AniListAdapter implements AnimeApiAdapter {
         if (!response.data) return [];
         return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getPopularShows(limit, page);
+        const response = await client.getPopularTV(limit, page);
         if (!response.data?.results) return [];
         const detailedResults = await Promise.all(
           response.data.results.map(async (result: TVSearchResult) => {
@@ -322,7 +332,7 @@ export class AniListAdapter implements AnimeApiAdapter {
         if (!response.data) return [];
         return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getTopRatedShows(limit, page);
+        const response = await client.getTopRatedTV(limit, page);
         if (!response.data?.results) return [];
         const detailedResults = await Promise.all(
           response.data.results.map(async (result: TVSearchResult) => {

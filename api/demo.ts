@@ -5,7 +5,7 @@
  * and YouTube to fetch anime data and map it to psychological dimensions.
  */
 
-import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter.js';
+import { AnimeApiAdapter, ApiProvider, AnimeTitle } from './anime-api-adapter.js';
 import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from './anime-attribute-mapper.js';
 import { fileURLToPath } from 'url';
 
@@ -149,7 +149,12 @@ if (import.meta.url === fileURLToPath(import.meta.url)) {
 
 export async function getAnimeDetails(animeId: string): Promise<AnimeTitle | null> {
   try {
-    const apiAdapter = createApiAdapter();
+    const apiAdapter = new AnimeApiAdapter({
+      anilist: {},
+      mal: {
+        clientId: process.env.MAL_CLIENT_ID || ''
+      }
+    });
     const details = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
     if (!details) return null;
 
