@@ -298,7 +298,7 @@ export class AniListAdapter implements AnimeApiAdapter {
         if (!response.data) return [];
         return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getPopularTV(limit, page);
+        const response = await client.discoverAnime(1);
         if (!response.data?.results) return [];
         const detailedResults = await Promise.all(
           response.data.results.map(async (result: TVSearchResult) => {
@@ -332,7 +332,7 @@ export class AniListAdapter implements AnimeApiAdapter {
         if (!response.data) return [];
         return response.data.map((anime: MALAnimeDetails) => this.convertMALAnime(anime));
       } else {
-        const response = await client.getTopRatedTV(limit, page);
+        const response = await client.discoverAnime(1);
         if (!response.data?.results) return [];
         const detailedResults = await Promise.all(
           response.data.results.map(async (result: TVSearchResult) => {
