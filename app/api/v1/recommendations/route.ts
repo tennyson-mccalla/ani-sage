@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/api/db';
-import { createApiAdapter } from '@/api/index';
+import { db } from '@/app/lib/db';
+import { createApiAdapter } from '@/app/lib/anime-api-adapter';
 import { corsHeaders } from '@/api/utils';
 
 export async function GET(request: NextRequest) {

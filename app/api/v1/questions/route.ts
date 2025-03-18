@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/api/db';
-import { questions } from '@/api/question-bank';
+import { db } from '@/app/lib/db';
+import { questions } from '@/app/lib/question-bank';
 import { corsHeaders } from '@/api/utils';
 
 export async function GET(request: NextRequest) {
@@ -51,61 +51,36 @@ export async function GET(request: NextRequest) {
     availableQuestions = availableQuestions.filter(q => !profile.answeredQuestions.includes(q.id));
 
     let selectedQuestions = [];
+    const targetDimensions = Object.entries(profile.confidences || {})
+      .filter(([_, confidence]) => confidence < 0.5)
+      .map(([dimension]) => dimension);
 
-    if (profile.confidences) {
-      const sortedDimensions = Object.entries(profile.confidences)
-        .map(([dimension, confidence]) => ({
-          dimension,
-          confidence: confidence as number
-        }))
-        .sort((a, b) => (a.confidence as number) - (b.confidence as number));
-
-      const targetDimensions = sortedDimensions
-        .slice(0, 3)
-        .map(d => d.dimension);
-
-      const targetingQuestions = availableQuestions.filter(q =>
-        q.targetDimensions && q.targetDimensions.some(d => targetDimensions.includes(d))
+    if (targetDimensions.length > 0) {
+      selectedQuestions = availableQuestions.filter(q =>
+        q.targetDimensions?.some(d => targetDimensions.includes(d))
       );
-
-      if (targetingQuestions.length > 0) {
-        while (selectedQuestions.length < Math.min(Number(count), targetingQuestions.length)) {
-          const randomIndex = Math.floor(Math.random() * targetingQuestions.length);
-          const question = targetingQuestions[randomIndex];
-
-          if (!selectedQuestions.find(q => q.id === question.id)) {
-            selectedQuestions.push(question);
-          }
-
-          targetingQuestions.splice(randomIndex, 1);
-        }
-      }
     }
 
-    while (selectedQuestions.length < Math.min(Number(count), availableQuestions.length)) {
-      const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-      const question = availableQuestions[randomIndex];
+    while (selectedQuestions.length < parseInt(count)) {
+      const remaining = availableQuestions.filter(
+        q => !selectedQuestions.includes(q)
+      );
+      if (remaining.length === 0) break;
 
-      if (!selectedQuestions.find(q => q.id === question.id)) {
-        selectedQuestions.push(question);
-      }
-
-      availableQuestions.splice(randomIndex, 1);
+      const randomIndex = Math.floor(Math.random() * remaining.length);
+      selectedQuestions.push(remaining[randomIndex]);
     }
 
     const formattedQuestions = selectedQuestions.map(q => ({
       id: q.id,
-      type: q.type || 'text',
+      type: q.type,
       text: q.text,
-      description: q.description || '',
-      imageUrl: q.imageUrl || '',
+      description: q.description,
+      imageUrl: q.imageUrl,
       options: q.options.map(opt => ({
         id: opt.id,
         text: opt.text,
-        imageUrl: opt.imageUrl || '',
-        value: opt.value || 0,
-        dimensionUpdates: opt.dimensionUpdates || {},
-        confidenceUpdates: opt.confidenceUpdates || {}
+        imageUrl: opt.imageUrl
       })),
       stage: q.stage
     }));
