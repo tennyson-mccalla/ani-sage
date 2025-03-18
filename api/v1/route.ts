@@ -1,8 +1,8 @@
-import { AnimeApiAdapter } from '../anime-api-adapter';
+import { AnimeApiAdapter } from '../anime-api-adapter.js';
 import { createApiAdapter } from '../index.js';
-import { questions } from '../question-bank';
-import { db, initDatabase } from '../db';
-import { Question, QuestionOption, Profile, Session } from '../types';
+import { questions } from '../question-bank.js';
+import { db, initDatabase } from '../db.js';
+import { Question, QuestionOption, Profile, Session } from '../types.js';
 
 // Initialize API adapter with configuration
 const apiAdapter = createApiAdapter();
