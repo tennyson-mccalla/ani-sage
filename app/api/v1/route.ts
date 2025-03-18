@@ -7,7 +7,8 @@ export async function OPTIONS() {
 
 export async function GET() {
   return NextResponse.json({
-    version: '1.0.0',
-    status: 'ok'
-  }, { headers: corsHeaders() });
+    message: "Hello from API root",
+    version: "1.0.0",
+    timestamp: new Date().toISOString()
+  });
 }
