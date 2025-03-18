@@ -1,15 +1,17 @@
 {
-  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "ui/ui",
   "builds": [
     {
-      "src": "ui/ui/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/ui/ui/$1"
