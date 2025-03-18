@@ -7,8 +7,12 @@
 
 import type { Question, QuestionOption } from './types';
 
+export interface QuestionWithDimensions extends Question {
+  targetDimensions: string[];
+}
+
 // Initialize the question bank
-const questions = getQuestionBank();
+const questions: QuestionWithDimensions[] = getQuestionBank();
 
 // Export the questions array
 export { questions };
@@ -16,7 +20,7 @@ export { questions };
 /**
  * Get all questions in the question bank
  */
-export function getQuestionBank(): Question[] {
+export function getQuestionBank(): QuestionWithDimensions[] {
   // Start with empty questions (structure only)
   const questions = getEmptySampleQuestions();
 
@@ -182,69 +186,69 @@ function getMappingsForOption(
 /**
  * Get a set of empty sample questions (structure without mappings)
  */
-export function getEmptySampleQuestions(): Question[] {
+export function getEmptySampleQuestions(): QuestionWithDimensions[] {
   return [
     {
       id: 'visual-style',
       type: 'image',
       text: 'Which visual style do you prefer in anime?',
+      targetDimensions: ['visualComplexity', 'colorSaturation'],
+      stage: 1,
       options: [
         { id: 'clean-simple', text: 'Clean and simple visuals, with emphasis on character expressions', mappings: [] },
         { id: 'balanced', text: 'Balanced visuals with moderate detail', mappings: [] },
         { id: 'detailed', text: 'Highly detailed and intricate visuals', mappings: [] },
         { id: 'dynamic', text: 'Dynamic and energetic visuals with lots of movement', mappings: [] }
-      ],
-      targetDimensions: ['visualComplexity', 'colorSaturation'],
-      stage: 1
+      ]
     },
     {
       id: 'narrative-complexity',
       type: 'text',
       text: 'How do you feel about complex storylines?',
+      targetDimensions: ['narrativeComplexity', 'plotPredictability'],
+      stage: 1,
       options: [
         { id: 'low-complexity', text: 'I prefer straightforward stories that are easy to follow', mappings: [] },
         { id: 'medium-complexity', text: 'I enjoy some complexity but don\'t want to feel lost', mappings: [] },
         { id: 'high-complexity', text: 'I love intricate plots with multiple layers and twists', mappings: [] }
-      ],
-      targetDimensions: ['narrativeComplexity', 'plotPredictability'],
-      stage: 1
+      ]
     },
     {
       id: 'character-depth',
       type: 'text',
       text: 'What kind of characters do you connect with most?',
+      targetDimensions: ['characterComplexity', 'characterGrowth'],
+      stage: 1,
       options: [
         { id: 'simple-characters', text: 'Clear, straightforward characters with defined traits', mappings: [] },
         { id: 'balanced-characters', text: 'Characters with some depth but still relatable', mappings: [] },
         { id: 'complex-characters', text: 'Deep, nuanced characters with internal conflicts and growth', mappings: [] }
-      ],
-      targetDimensions: ['characterComplexity', 'characterGrowth'],
-      stage: 1
+      ]
     },
     {
       id: 'moral-ambiguity',
       type: 'scenario',
       text: 'In stories, do you prefer:',
+      targetDimensions: ['moralAmbiguity'],
+      stage: 2,
       options: [
         { id: 'clear-morals', text: 'Clear heroes and villains with defined moral boundaries', mappings: [] },
         { id: 'nuanced-morals', text: 'Characters with understandable motivations even when doing wrong', mappings: [] },
         { id: 'ambiguous', text: 'Morally ambiguous situations where right and wrong aren\'t clear', mappings: [] }
-      ],
-      targetDimensions: ['moralAmbiguity'],
-      stage: 2
+      ]
     },
     {
       id: 'emotional-tone',
       type: 'preference',
       text: 'Which emotional tone do you prefer in stories?',
+      targetDimensions: ['emotionalValence', 'emotionalIntensity'],
+      stage: 2,
       options: [
         { id: 'light-optimistic', text: 'Light and optimistic', mappings: [] },
         { id: 'exciting-uplifting', text: 'Exciting and uplifting', mappings: [] },
         { id: 'dark-serious', text: 'Dark and serious', mappings: [] },
         { id: 'bittersweet-reflective', text: 'Bittersweet and reflective', mappings: [] }
-      ],
-      targetDimensions: ['emotionalValence', 'emotionalIntensity'],
-      stage: 2
+      ]
     }
   ];
 }
@@ -257,9 +261,9 @@ export function getEmptySampleQuestions(): Question[] {
  * @returns The question or undefined if not found
  */
 export function getSampleQuestionById(
-  questions: Question[],
+  questions: QuestionWithDimensions[],
   questionId: string
-): Question | undefined {
+): QuestionWithDimensions | undefined {
   return questions.find(q => q.id === questionId);
 }
 
@@ -273,7 +277,7 @@ export function getSampleQuestionById(
 export function selectNextQuestion(
   userProfile: import('./types').Profile,
   answeredIds: string[] = []
-): Question | null {
+): QuestionWithDimensions | null {
   const allQuestions = getQuestionBank();
 
   // Filter out already answered questions

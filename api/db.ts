@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { neon } from '@neondatabase/serverless';
+import { Profile, Session } from './types';
 
 // Initialize Redis client
 const redis = new Redis({
@@ -22,15 +23,76 @@ const schema = `
   );
 `;
 
-// Initialize database schema
-export async function initDatabase() {
-  try {
-    await sql(schema);
-    console.log('Database schema initialized successfully');
-  } catch (error) {
-    console.error('Error initializing database schema:', error);
-    throw error;
+export interface Database {
+  createSession(): Promise<Session>;
+  getSession(id: string): Promise<Session | null>;
+  updateSession(id: string, updates: Partial<Session>): Promise<Session>;
+  createProfile(sessionId: string): Promise<Profile>;
+  getProfile(sessionId: string): Promise<Profile | null>;
+  updateProfile(sessionId: string, updates: Partial<Profile>): Promise<Profile>;
+}
+
+class InMemoryDatabase implements Database {
+  private sessions: Map<string, Session> = new Map();
+  private profiles: Map<string, Profile> = new Map();
+
+  async createSession(): Promise<Session> {
+    const session: Session = {
+      id: Math.random().toString(36).substring(2),
+      currentQuestionIndex: 0,
+      answeredQuestions: [],
+      recommendations: [],
+      startTime: new Date().toISOString(),
+      lastUpdateTime: new Date().toISOString()
+    };
+    this.sessions.set(session.id, session);
+    return session;
   }
+
+  async getSession(id: string): Promise<Session | null> {
+    return this.sessions.get(id) || null;
+  }
+
+  async updateSession(id: string, updates: Partial<Session>): Promise<Session> {
+    const session = await this.getSession(id);
+    if (!session) {
+      throw new Error(`Session not found: ${id}`);
+    }
+    const updatedSession = { ...session, ...updates };
+    this.sessions.set(id, updatedSession);
+    return updatedSession;
+  }
+
+  async createProfile(sessionId: string): Promise<Profile> {
+    const profile: Profile = {
+      sessionId,
+      dimensions: {},
+      confidence: {},
+      lastUpdateTime: new Date().toISOString()
+    };
+    this.profiles.set(sessionId, profile);
+    return profile;
+  }
+
+  async getProfile(sessionId: string): Promise<Profile | null> {
+    return this.profiles.get(sessionId) || null;
+  }
+
+  async updateProfile(sessionId: string, updates: Partial<Profile>): Promise<Profile> {
+    const profile = await this.getProfile(sessionId);
+    if (!profile) {
+      throw new Error(`Profile not found: ${sessionId}`);
+    }
+    const updatedProfile = { ...profile, ...updates };
+    this.profiles.set(sessionId, updatedProfile);
+    return updatedProfile;
+  }
+}
+
+export const db: Database = new InMemoryDatabase();
+
+export async function initDatabase(): Promise<void> {
+  // No initialization needed for in-memory database
 }
 
 // Profile operations
@@ -126,7 +188,7 @@ export async function deleteSession(sessionId: string) {
 }
 
 // Export database instance for direct access if needed
-export const db = {
+export const dbInstance = {
   createProfile,
   getProfile,
   updateProfile,

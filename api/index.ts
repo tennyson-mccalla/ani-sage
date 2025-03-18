@@ -18,7 +18,7 @@ export { AniListClient, MALClient, TMDbClient, YouTubeClient };
 
 // Unified API adapter - export specific names to avoid conflicts
 import type { AnimeTitle } from './anime-api-adapter';
-import { AnimeApiAdapter } from './anime-api-adapter';
+import { AnimeApiAdapter, AniListAdapter } from './anime-api-adapter';
 import { ApiProvider } from './anime-api-adapter';
 import type { ApiConfig } from './anime-api-adapter';
 
@@ -43,35 +43,6 @@ import * as dotenv from 'dotenv';
  * @returns Configured API adapter instance
  */
 export function createApiAdapter(): AnimeApiAdapter {
-  // Load environment variables if not already loaded
-  dotenv.config();
-
-  // Create configuration object from environment variables
-  const config: ApiConfig = {
-    tmdb: {
-      apiKey: process.env.TMDB_API_KEY || ''
-    },
-    youtube: {
-      apiKey: process.env.YOUTUBE_API_KEY || ''
-    }
-  };
-
-  // Add MAL configuration if available
-  if (process.env.MAL_CLIENT_ID) {
-    config.mal = {
-      clientId: process.env.MAL_CLIENT_ID,
-      clientSecret: process.env.MAL_CLIENT_SECRET,
-      accessToken: process.env.MAL_ACCESS_TOKEN
-    };
-  }
-
-  // Add AniList configuration if available
-  if (process.env.ANILIST_ACCESS_TOKEN) {
-    config.anilist = {
-      accessToken: process.env.ANILIST_ACCESS_TOKEN
-    };
-  }
-
-  // Return new instance of the adapter
-  return new AnimeApiAdapter(config);
+  // For now, we'll just use AniList
+  return new AniListAdapter();
 }

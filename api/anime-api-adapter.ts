@@ -10,6 +10,7 @@ import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/
 import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client.js';
 import { YouTubeClient } from './providers/youtube/client.js';
 import { TMDbClient, TVDetails } from './providers/tmdb/client.js';
+import { BaseAPIClient } from './core/client';
 
 // Unified anime model that works across different providers
 export interface AnimeTitle {
@@ -62,6 +63,38 @@ export enum ApiProvider {
   ANILIST = 'anilist',
   MAL = 'mal',
   TMDB = 'tmdb'
+}
+
+export interface AnimeApiAdapter {
+  searchAnime(query: string): Promise<any[]>;
+  getAnimeDetails(id: string): Promise<any>;
+  getAnimeRecommendations(id: string): Promise<any[]>;
+}
+
+export class AniListAdapter extends BaseAPIClient implements AnimeApiAdapter {
+  constructor() {
+    super('https://graphql.anilist.co', {
+      enableCache: true,
+      enableRateLimit: true,
+      maxRetries: 3,
+      providerName: 'anilist'
+    });
+  }
+
+  async searchAnime(query: string): Promise<any[]> {
+    // TODO: Implement AniList search
+    return [];
+  }
+
+  async getAnimeDetails(id: string): Promise<any> {
+    // TODO: Implement AniList details
+    return {};
+  }
+
+  async getAnimeRecommendations(id: string): Promise<any[]> {
+    // TODO: Implement AniList recommendations
+    return [];
+  }
 }
 
 /**
