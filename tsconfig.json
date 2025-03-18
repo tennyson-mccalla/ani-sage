@@ -1,17 +1,26 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2020"],
-    "types": ["@cloudflare/workers-types", "node"],
-    "strict": true,
-    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
     "esModuleInterop": true,
+    "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": ["src/**/*", "api/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "api/**/*.ts",
+    "api/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "ui",
+    "dist"
+  ]
 }

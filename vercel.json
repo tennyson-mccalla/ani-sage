@@ -5,7 +5,13 @@
   "builds": [
     {
       "src": "api/v1/route.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "api/**/*.ts",
+          "api/**/*.js"
+        ]
+      }
     }
   ],
   "routes": [
