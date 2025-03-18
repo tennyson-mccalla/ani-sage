@@ -6,33 +6,33 @@
  */
 
 // Core API functionality
-export * from './core/client.js';
+export * from './core/client';
 
 // Provider-specific clients - export each client class explicitly to avoid name conflicts
-import { AniListClient } from './providers/anilist/client.js';
-import { MALClient } from './providers/mal/client.js';
-import { TMDbClient } from './providers/tmdb/client.js';
-import { YouTubeClient } from './providers/youtube/client.js';
+import { AniListClient } from './providers/anilist/client';
+import { MALClient } from './providers/mal/client';
+import { TMDbClient } from './providers/tmdb/client';
+import { YouTubeClient } from './providers/youtube/client';
 
 export { AniListClient, MALClient, TMDbClient, YouTubeClient };
 
 // Unified API adapter - export specific names to avoid conflicts
-import type { AnimeTitle } from './anime-api-adapter.js';
-import { AnimeApiAdapter } from './anime-api-adapter.js';
-import { ApiProvider } from './anime-api-adapter.js';
-import type { ApiConfig } from './anime-api-adapter.js';
+import type { AnimeTitle } from './anime-api-adapter';
+import { AnimeApiAdapter } from './anime-api-adapter';
+import { ApiProvider } from './anime-api-adapter';
+import type { ApiConfig } from './anime-api-adapter';
 
 export { AnimeApiAdapter, ApiProvider };
 export type { ApiConfig, AnimeTitle };
 
 // Anime attribute mapping
-export * from './anime-attribute-mapper.js';
+export * from './anime-attribute-mapper';
 
 // MCP integration
-export * from './mcp-anime-integration.js';
+export * from './mcp-anime-integration';
 
 // Demo
-export { runApiDemo } from './demo.js';
+export { runApiDemo } from './demo';
 
 // Helper function to create API adapter
 import * as dotenv from 'dotenv';
