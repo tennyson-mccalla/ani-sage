@@ -1,5 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
+import { corsHeaders } from '@/app/lib/utils';
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders() });
+}
 
 export async function GET() {
   try {
@@ -25,12 +30,12 @@ export async function GET() {
       isNewUser: true,
       profileConfidence: 0,
       interactionCount: 0
-    });
+    }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error creating session:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

@@ -4,11 +4,15 @@ const nextConfig = {
   experimental: {
     serverActions: true,
   },
-  async rewrites() {
+  async headers() {
     return [
       {
-        source: '/api/v1/:path*',
-        destination: '/api/v1/:path*',
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+        ],
       },
     ];
   },
