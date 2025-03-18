@@ -669,4 +669,70 @@ export class AniListClient extends BaseAPIClient {
 
     return response as APIResponse<AnimeDetails[]>;
   }
+
+  /**
+   * Get anime recommendations based on a specific anime
+   *
+   * @param animeId ID of the anime to get recommendations for
+   * @returns API response with recommended anime
+   */
+  public async getAnimeRecommendations(animeId: number): Promise<APIResponse<AnimeDetails[]>> {
+    const query = `
+      query ($id: Int) {
+        Media(id: $id, type: ANIME) {
+          recommendations(sort: RATING_DESC) {
+            nodes {
+              mediaRecommendation {
+                id
+                title {
+                  romaji
+                  english
+                  native
+                }
+                coverImage {
+                  large
+                  medium
+                }
+                description
+                format
+                episodes
+                status
+                genres
+                studios {
+                  nodes {
+                    name
+                  }
+                }
+                startDate {
+                  year
+                  month
+                  day
+                }
+                popularity
+                averageScore
+                seasonYear
+                season
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await this.graphqlRequest(
+      query,
+      { id: animeId }
+    );
+
+    // Transform the response
+    if (response.data?.data?.Media?.recommendations?.nodes) {
+      response.data = response.data.data.Media.recommendations.nodes.map(
+        (node: any) => node.mediaRecommendation
+      );
+    } else {
+      response.data = [];
+    }
+
+    return response as APIResponse<AnimeDetails[]>;
+  }
 }
