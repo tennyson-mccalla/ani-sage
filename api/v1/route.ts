@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { AnimeApiAdapter } from '../anime-api-adapter';
 import { createApiAdapter } from '../index';
 import { questions } from '../question-bank';
@@ -18,6 +17,17 @@ function corsHeaders() {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
+}
+
+// Helper function to create JSON response
+function jsonResponse(data: any, status: number = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeaders()
+    }
+  });
 }
 
 // Handle session initialization/retrieval
@@ -75,18 +85,18 @@ async function handleSession() {
   await db.createProfile(profile);
   await db.createSession(session);
 
-  return NextResponse.json({
+  return jsonResponse({
     sessionId,
     isNewUser: true,
     profileConfidence: 0,
     interactionCount: 0
-  }, { headers: corsHeaders() });
+  });
 }
 
 // Handle getting questions
-async function handleGetQuestions(req: NextRequest) {
+async function handleGetQuestions(req: Request) {
   try {
-    const searchParams = req.nextUrl.searchParams;
+    const searchParams = new URL(req.url).searchParams;
     const count = searchParams.get('count') || '5';
     const stage = searchParams.get('stage');
     const sessionId = searchParams.get('sessionId');
@@ -94,36 +104,27 @@ async function handleGetQuestions(req: NextRequest) {
     console.log(`Getting questions for session ${sessionId}, stage ${stage}, count ${count}`);
 
     if (!sessionId) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Missing sessionId'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     // Get session and profile
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Session not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     const profile = await db.getProfile(session.profileId);
     if (!profile) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Profile not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     // Filter questions by stage if specified
@@ -208,199 +209,159 @@ async function handleGetQuestions(req: NextRequest) {
       stage: q.stage
     }));
 
-    return NextResponse.json({ questions: formattedQuestions }, { headers: corsHeaders() });
+    return jsonResponse({ questions: formattedQuestions });
   } catch (error) {
     console.error('Error getting questions:', error);
-    return NextResponse.json({
+    return jsonResponse({
       error: 'server_error',
       message: 'Error retrieving questions',
       details: String(error)
-    }, {
-      status: 500,
-      headers: corsHeaders()
-    });
+    }, 500);
   }
 }
 
 // Handle submitting an answer
-async function handleSubmitAnswer(req: NextRequest) {
+async function handleSubmitAnswer(req: Request) {
   try {
     const data = await req.json();
     const { optionId, sessionId } = data;
-    const questionId = req.nextUrl.pathname.split('/').slice(-2)[0];
+    const questionId = new URL(req.url).pathname.split('/').slice(-2)[0];
 
     if (!sessionId || !optionId) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Missing required fields'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     // Get session and profile
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Session not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     const profile = await db.getProfile(session.profileId);
     if (!profile) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Profile not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     // Get the question and selected option
     const question = questions.find(q => q.id === questionId);
     if (!question) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Question not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     const option = question.options.find(opt => opt.id === optionId);
     if (!option) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Invalid option selected'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     // Update profile
     const updatedProfile = await updateProfileWithAnswer(profile, questionId, optionId);
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       profile: {
         dimensions: updatedProfile.dimensions,
         confidences: updatedProfile.confidences
       }
-    }, { headers: corsHeaders() });
+    });
   } catch (error) {
     console.error('Error submitting answer:', error);
-    return NextResponse.json({
+    return jsonResponse({
       error: 'server_error',
       message: 'Error processing answer',
       details: String(error)
-    }, {
-      status: 500,
-      headers: corsHeaders()
-    });
+    }, 500);
   }
 }
 
 // Handle getting user profile
-async function handleGetProfile(req: NextRequest) {
+async function handleGetProfile(req: Request) {
   try {
-    const sessionId = req.nextUrl.searchParams.get('sessionId');
+    const searchParams = new URL(req.url).searchParams;
+    const sessionId = searchParams.get('sessionId');
 
     if (!sessionId) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Missing sessionId'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Session not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     const profile = await db.getProfile(session.profileId);
     if (!profile) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Profile not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       profile: {
         dimensions: profile.dimensions,
         confidences: profile.confidences,
         answeredQuestions: profile.answeredQuestions
       }
-    }, { headers: corsHeaders() });
+    });
   } catch (error) {
     console.error('Error getting profile:', error);
-    return NextResponse.json({
+    return jsonResponse({
       error: 'server_error',
       message: 'Error retrieving profile',
       details: String(error)
-    }, {
-      status: 500,
-      headers: corsHeaders()
-    });
+    }, 500);
   }
 }
 
 // Handle getting recommendations
-async function handleGetRecommendations(req: NextRequest) {
+async function handleGetRecommendations(req: Request) {
   try {
-    const sessionId = req.nextUrl.searchParams.get('sessionId');
-    const count = req.nextUrl.searchParams.get('count') || '10';
+    const searchParams = new URL(req.url).searchParams;
+    const sessionId = searchParams.get('sessionId');
+    const count = searchParams.get('count') || '10';
 
     if (!sessionId) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Missing sessionId'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Session not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     const profile = await db.getProfile(session.profileId);
     if (!profile) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'not_found',
         message: 'Profile not found'
-      }, {
-        status: 404,
-        headers: corsHeaders()
-      });
+      }, 404);
     }
 
     // Get recommendations from the API adapter
@@ -409,50 +370,42 @@ async function handleGetRecommendations(req: NextRequest) {
       count: parseInt(count, 10)
     });
 
-    return NextResponse.json({ recommendations }, { headers: corsHeaders() });
+    return jsonResponse({ recommendations });
   } catch (error) {
     console.error('Error getting recommendations:', error);
-    return NextResponse.json({
+    return jsonResponse({
       error: 'server_error',
       message: 'Error retrieving recommendations',
       details: String(error)
-    }, {
-      status: 500,
-      headers: corsHeaders()
-    });
+    }, 500);
   }
 }
 
 // Handle getting specific anime details
-async function handleGetAnimeDetails(req: NextRequest) {
+async function handleGetAnimeDetails(req: Request) {
   try {
-    const animeId = req.nextUrl.pathname.split('/').pop();
-    const sessionId = req.nextUrl.searchParams.get('sessionId');
+    const url = new URL(req.url);
+    const animeId = url.pathname.split('/').pop();
+    const sessionId = url.searchParams.get('sessionId');
 
     if (!animeId) {
-      return NextResponse.json({
+      return jsonResponse({
         error: 'bad_request',
         message: 'Missing anime ID'
-      }, {
-        status: 400,
-        headers: corsHeaders()
-      });
+      }, 400);
     }
 
     // Get anime details from the API adapter
     const details = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
 
-    return NextResponse.json({ anime: details }, { headers: corsHeaders() });
+    return jsonResponse({ anime: details });
   } catch (error) {
     console.error('Error getting anime details:', error);
-    return NextResponse.json({
+    return jsonResponse({
       error: 'server_error',
       message: 'Error retrieving anime details',
       details: String(error)
-    }, {
-      status: 500,
-      headers: corsHeaders()
-    });
+    }, 500);
   }
 }
 
@@ -577,35 +530,39 @@ async function getAnimeDetails(animeId: string): Promise<any> {
 // Main handler for all API routes
 export async function GET(request: Request) {
   try {
-    const sessionId = request.headers.get('x-session-id');
+    const url = new URL(request.url);
+    const sessionId = url.searchParams.get('sessionId');
+
     if (!sessionId) {
-      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+      return jsonResponse({ error: 'Session ID is required' }, 400);
     }
 
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return jsonResponse({ error: 'Session not found' }, 404);
     }
 
     const profile = await db.getProfileForSession(sessionId);
     if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      return jsonResponse({ error: 'Profile not found' }, 404);
     }
 
     const nextQuestion = await getNextQuestion(profile);
-    return NextResponse.json({ profile, nextQuestion }, { headers: corsHeaders() });
+    return jsonResponse({ profile, nextQuestion });
   } catch (error) {
     console.error('Error in GET handler:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders() });
+    return jsonResponse({ error: 'Internal server error' }, 500);
   }
 }
 
 // Handle POST requests
 export async function POST(request: Request) {
   try {
-    const sessionId = request.headers.get('x-session-id');
+    const url = new URL(request.url);
+    const sessionId = url.searchParams.get('sessionId');
+
     if (!sessionId) {
-      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+      return jsonResponse({ error: 'Session ID is required' }, 400);
     }
 
     const body = await request.json();
@@ -614,19 +571,19 @@ export async function POST(request: Request) {
     if (questionId && selectedOptionId) {
       const session = await db.getSession(sessionId);
       if (!session) {
-        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+        return jsonResponse({ error: 'Session not found' }, 404);
       }
 
       const profile = await db.getProfileForSession(sessionId);
       if (!profile) {
-        return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        return jsonResponse({ error: 'Profile not found' }, 404);
       }
 
       const updatedProfile = await updateProfileWithAnswer(profile, questionId, selectedOptionId);
       await db.updateProfile(updatedProfile);
 
       const nextQuestion = await getNextQuestion(updatedProfile);
-      return NextResponse.json({ profile: updatedProfile, nextQuestion }, { headers: corsHeaders() });
+      return jsonResponse({ profile: updatedProfile, nextQuestion });
     } else {
       // Create new session and profile
       const profileId = Math.random().toString(36).substring(2);
@@ -650,33 +607,34 @@ export async function POST(request: Request) {
       await db.createSession(session);
 
       const nextQuestion = await getNextQuestion(profile);
-      return NextResponse.json({ profile, nextQuestion }, { headers: corsHeaders() });
+      return jsonResponse({ profile, nextQuestion });
     }
   } catch (error) {
     console.error('Error in POST handler:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders() });
+    return jsonResponse({ error: 'Internal server error' }, 500);
   }
 }
 
 // Handle recommendations request
-export async function getRecommendationsHandler(request: NextRequest) {
+export async function getRecommendationsHandler(request: Request) {
   try {
-    const sessionId = request.nextUrl.searchParams.get('sessionId');
-    const count = request.nextUrl.searchParams.get('count');
+    const searchParams = new URL(request.url).searchParams;
+    const sessionId = searchParams.get('sessionId');
+    const count = searchParams.get('count');
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'Missing sessionId parameter' }, { status: 400 });
+      return jsonResponse({ error: 'Missing sessionId parameter' }, 400);
     }
 
     const session = await db.getSession(sessionId);
     if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return jsonResponse({ error: 'Session not found' }, 404);
     }
 
     const recommendations = await getRecommendations(session, count ? parseInt(count, 10) : undefined);
-    return NextResponse.json({ recommendations });
+    return jsonResponse({ recommendations });
   } catch (error) {
     console.error('Error getting recommendations:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return jsonResponse({ error: 'Internal server error' }, 500);
   }
 }
