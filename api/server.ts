@@ -7,9 +7,9 @@
 import * as http from 'http';
 import * as url from 'url';
 import dotenv from 'dotenv';
-import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter';
-import { createApiAdapter } from './index';
-import { questions } from './question-bank';
+import { AnimeApiAdapter, ApiProvider, AnimeTitle, AnimeAttributes } from './anime-api-adapter.js';
+import { createApiAdapter } from './index.js';
+import { questions } from './question-bank.js';
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +20,116 @@ const apiAdapter = createApiAdapter();
 // Simple in-memory storage for sessions and profiles
 const sessions: Record<string, any> = {};
 const profiles: Record<string, any> = {};
+
+interface DimensionMapping {
+  dimension: string;
+  value: number;
+  confidence: number;
+}
+
+interface NormalizedAnime extends AnimeTitle {
+  id: string;
+  title: string;
+  alternativeTitles: string[];
+  synopsis: string;
+  score: number;
+  genres: string[];
+  image?: {
+    medium?: string;
+    large?: string;
+  };
+  trailer?: string;
+  externalIds: Record<string, any>;
+}
+
+interface UserProfile {
+  dimensions: Record<string, number>;
+  confidences: Record<string, number>;
+  answeredQuestions: string[];
+}
+
+interface QuestionOptionMapping {
+  dimension: string;
+  value: number;
+  confidence: number;
+}
+
+interface QuestionOption {
+  id: string;
+  text: string;
+  imageUrl?: string;
+  mappings: QuestionOptionMapping[];
+}
+
+interface Question {
+  id: string;
+  type: string;
+  text: string;
+  description?: string;
+  imageUrl?: string;
+  options: QuestionOption[];
+  stage: number;
+  targetDimensions?: string[];
+}
+
+function normalizeAnimeId(id: string | number): string {
+  return String(id);
+}
+
+function normalizeAnime(anime: any): NormalizedAnime {
+  return {
+    id: normalizeAnimeId(anime.id),
+    title: anime.title,
+    alternativeTitles: anime.alternativeTitles || [],
+    synopsis: anime.synopsis || '',
+    score: anime.score || 0,
+    genres: anime.genres || [],
+    image: anime.image || undefined,
+    trailer: anime.trailer || undefined,
+    externalIds: anime.externalIds || {}
+  };
+}
+
+async function inferAnimeAttributes(anime: any): Promise<AnimeAttributes> {
+  const normalizedAnime = normalizeAnime(anime);
+
+  const mappings: DimensionMapping[] = [
+    // ... existing mappings ...
+  ];
+
+  const attributes: AnimeAttributes = {};
+  for (const mapping of mappings) {
+    const { dimension, value } = mapping;
+    attributes[dimension] = value;
+  }
+
+  return attributes;
+}
+
+async function enrichWithTrailer(anime: NormalizedAnime): Promise<NormalizedAnime> {
+  const trailerUrl = anime.trailer || '';
+
+  return {
+    ...anime,
+    trailer: trailerUrl || undefined
+  };
+}
+
+function formatAnimeResponse(anime: NormalizedAnime) {
+  const poster = anime.image?.large || anime.image?.medium;
+
+  return {
+    id: anime.id,
+    title: anime.title,
+    alternativeTitles: anime.alternativeTitles,
+    synopsis: anime.synopsis,
+    score: anime.score,
+    genres: anime.genres,
+    trailer: anime.trailer,
+    poster: poster || undefined,
+    externalIds: anime.externalIds
+  };
+}
 
 // Create HTTP server
 const server = http.createServer(async (req, res) => {
@@ -102,11 +212,11 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
           characterComplexity: 5,
           characterGrowth: 5,
           emotionalIntensity: 5,
-          emotionalValence: 0, // -5 to 5 scale
+          emotionalValence: 0,
           moralAmbiguity: 5,
-          fantasyRealism: 0, // -5 to 5 scale
-          intellectualEmotional: 0, // -5 to 5 scale
-          noveltyFamiliarity: 0, // -5 to 5 scale
+          fantasyRealism: 0,
+          intellectualEmotional: 0,
+          noveltyFamiliarity: 0,
         },
         confidences: {
           visualComplexity: 0.1,
@@ -125,37 +235,46 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
           noveltyFamiliarity: 0.1,
         },
         answeredQuestions: []
-      };
+      } as UserProfile;
     }
 
     // Get user profile for question selection
-    const userProfile = profiles[sessionId as string];
+    const userProfile = profiles[sessionId as string] as UserProfile;
     const answeredQuestionsIds = userProfile.answeredQuestions || [];
 
     // Filter questions by stage if specified
-    let availableQuestions: any[] = questions;
+    let availableQuestions = questions.map(q => ({
+      ...q,
+      options: q.options.map(opt => ({
+        ...opt,
+        mappings: opt.mappings?.map(m => ({
+          ...m,
+          confidence: m.confidence || 0.5
+        })) || []
+      }))
+    })) as Question[];
     if (stage) {
       const stageNum = parseInt(stage as string, 10);
-      availableQuestions = questions.filter((q: any) => q.stage === stageNum);
+      availableQuestions = availableQuestions.filter(q => q.stage === stageNum);
       console.log(`Filtered to ${availableQuestions.length} questions for stage ${stageNum}`);
     }
 
     // Filter out questions that have already been answered
-    availableQuestions = availableQuestions.filter((q: any) => !answeredQuestionsIds.includes(q.id));
+    availableQuestions = availableQuestions.filter(q => !answeredQuestionsIds.includes(q.id));
     console.log(`${availableQuestions.length} questions available after filtering answered questions`);
 
     // If we have a user profile with dimensions and confidences, we can use it to select questions
     // targeting dimensions with low confidence
-    let selectedQuestions: any[] = [];
+    let selectedQuestions: Question[] = [];
 
     if (userProfile && userProfile.confidences) {
       // Sort dimensions by confidence ascending
       const sortedDimensions = Object.entries(userProfile.confidences)
         .map(([dimension, confidence]) => ({
           dimension,
-          confidence: confidence as number
+          confidence
         }))
-        .sort((a, b) => (a.confidence as number) - (b.confidence as number));
+        .sort((a, b) => a.confidence - b.confidence);
 
       // Target the dimensions with lowest confidence
       const targetDimensions = sortedDimensions
@@ -165,8 +284,8 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
       console.log(`Targeting dimensions with lowest confidence: ${targetDimensions.join(', ')}`);
 
       // Find questions that target these dimensions
-      const targetingQuestions = availableQuestions.filter((q: any) =>
-        q.targetDimensions && q.targetDimensions.some((d: string) => targetDimensions.includes(d))
+      const targetingQuestions = availableQuestions.filter(q =>
+        q.targetDimensions && q.targetDimensions.some(d => targetDimensions.includes(d))
       );
 
       if (targetingQuestions.length > 0) {
@@ -194,7 +313,7 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
       const question = availableQuestions[randomIndex];
 
       // Only add if not already selected
-      if (!selectedQuestions.find((q: any) => q.id === question.id)) {
+      if (!selectedQuestions.find(q => q.id === question.id)) {
         selectedQuestions.push(question);
       }
 
@@ -205,16 +324,16 @@ async function handleGetQuestions(req: http.IncomingMessage, res: http.ServerRes
     console.log(`Selected ${selectedQuestions.length} questions`);
 
     // Format questions for the frontend by cleaning up irrelevant fields
-    const formattedQuestions = selectedQuestions.map((q: any) => ({
+    const formattedQuestions = selectedQuestions.map(q => ({
       id: q.id,
       type: q.type || 'text',
       text: q.text,
       description: q.description,
-      imageUrl: q.imageUrl, // For image-based questions
-      options: q.options.map((opt: any) => ({
+      imageUrl: q.imageUrl,
+      options: q.options.map(opt => ({
         id: opt.id,
         text: opt.text,
-        imageUrl: opt.imageUrl // For image options
+        imageUrl: opt.imageUrl
       })),
       stage: q.stage
     }));
@@ -528,7 +647,7 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
     console.log(`Getting recommendations for session ${sessionId}`);
 
     // Get user profile or use default if not found
-    const userProfile = profiles[sessionId as string] || {
+    const userProfile = profiles[sessionId as string] as UserProfile || {
       dimensions: {
         visualComplexity: 5,
         colorSaturation: 5,
@@ -550,11 +669,12 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
     console.log('Fetching anime from API using psychological profile...');
 
     // Get top anime from API
-    let animeList;
+    let animeList: NormalizedAnime[];
     try {
       // Try to get popular anime
       console.log('Fetching anime list...');
-      animeList = await apiAdapter.getPopularAnime(10, 1);
+      const popularAnime = await apiAdapter.getPopularAnime(10, 1);
+      animeList = popularAnime.map(normalizeAnime);
 
       // If no anime found, try seasonal
       if (!animeList || animeList.length === 0) {
@@ -577,7 +697,8 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         else season = 'fall';
 
         console.log(`Fetching seasonal anime for ${season} ${year}...`);
-        animeList = await apiAdapter.getSeasonalAnime(year, season, 10);
+        const seasonalAnime = await apiAdapter.getSeasonalAnime(year, season, 10);
+        animeList = seasonalAnime.map(normalizeAnime);
 
         // If no anime found, use hardcoded
         if (!animeList || animeList.length === 0) {
@@ -589,7 +710,7 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
         // Fallback to hardcoded data if all API calls fail
         animeList = [
           {
-            id: 1,
+            id: '1',
             title: 'Fullmetal Alchemist: Brotherhood',
             alternativeTitles: [],
             image: {
@@ -599,10 +720,11 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
             synopsis: 'Two brothers search for a Philosopher\'s Stone after an attempt to revive their deceased mother goes wrong, changing their bodies.',
             score: 9.1,
             genres: ['Action', 'Adventure', 'Drama', 'Fantasy'],
-            trailer: 'https://youtube.com/watch?v=--IcmZkvL0Q'
+            trailer: 'https://youtube.com/watch?v=--IcmZkvL0Q',
+            externalIds: {}
           },
           {
-            id: 2,
+            id: '2',
             title: 'Steins;Gate',
             alternativeTitles: [],
             image: {
@@ -612,10 +734,11 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
             synopsis: 'A group of friends accidentally create a time machine, leading to dramatic consequences as they attempt to prevent global disaster.',
             score: 9.0,
             genres: ['Sci-Fi', 'Thriller', 'Drama'],
-            trailer: 'https://youtube.com/watch?v=27OZc-ku6is'
+            trailer: 'https://youtube.com/watch?v=27OZc-ku6is',
+            externalIds: {}
           },
           {
-            id: 3,
+            id: '3',
             title: 'Violet Evergarden',
             alternativeTitles: [],
             image: {
@@ -625,7 +748,8 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
             synopsis: 'A former soldier becomes a letter writer and explores the meaning of love as she recovers from the war.',
             score: 8.9,
             genres: ['Drama', 'Fantasy', 'Slice of Life'],
-            trailer: 'https://youtube.com/watch?v=0CJeDetA45Q'
+            trailer: 'https://youtube.com/watch?v=0CJeDetA45Q',
+            externalIds: {}
           }
         ];
       }
@@ -633,23 +757,23 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
 
     // Assign psychological attributes to each anime based on metadata
     console.log('Mapping anime to psychological attributes...');
-    const animeWithAttributes = animeList.map(anime => {
+    const animeWithAttributes = await Promise.all(animeList.map(async anime => {
       // Use the actual inferAnimeAttributes method if available
-      let attributes = {};
+      let attributes: AnimeAttributes = {};
       try {
-        attributes = apiAdapter.inferAnimeAttributes(anime);
+        attributes = await apiAdapter.inferAnimeAttributes(anime);
       } catch (error) {
         console.error(`Error inferring attributes for anime ${anime.id}:`, error);
 
         // Default attributes based on genres if inference fails
-        attributes = inferAttributesFromGenres(anime.genres || []);
+        attributes = inferAttributesFromGenres(anime.genres);
       }
 
       return {
         anime,
         attributes
       };
-    });
+    }));
 
     // Score each anime based on match with user profile
     console.log('Calculating match scores based on psychological profile...');
@@ -665,12 +789,12 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
       for (const dimension of Object.keys(userProfile.dimensions)) {
         if (dimension in attributes && dimension in userProfile.dimensions) {
           // Get the values to compare
-          const userValue = (userProfile.dimensions as Record<string, number>)[dimension];
-          const animeValue = (attributes as Record<string, number>)[dimension];
+          const userValue = userProfile.dimensions[dimension];
+          const animeValue = attributes[dimension];
 
           // Get confidence as weight (higher confidence = more important)
           const confidence = userProfile.confidences ?
-            (userProfile.confidences as Record<string, number>)[dimension] || 0.5 : 0.5;
+            userProfile.confidences[dimension] || 0.5 : 0.5;
           const weight = confidence;
 
           // For dimensions with range 0-10
@@ -722,7 +846,7 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
     console.log('Enriching recommendations with trailers...');
     const enrichedRecommendations = await Promise.all(topMatches.map(async ({ anime, matchScore, matchReasons }) => {
       try {
-        const enrichedAnime = await apiAdapter.enrichWithTrailer(anime);
+        const enrichedAnime = await enrichWithTrailer(anime);
 
         // Extract YouTube ID from trailer URL
         let youtubeTrailerId = null;
@@ -736,13 +860,13 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
           id: String(enrichedAnime.id),
           title: enrichedAnime.title,
           imageUrls: {
-            poster: enrichedAnime.image.large || enrichedAnime.image.medium ||
+            poster: enrichedAnime.image?.large || enrichedAnime.image?.medium ||
                    `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(enrichedAnime.title)}`
           },
           genres: enrichedAnime.genres || [],
-          score: matchScore,  // Use our psychological match score
+          score: matchScore,
           synopsis: enrichedAnime.synopsis || 'No synopsis available.',
-          matchReasons: matchReasons.slice(0, 3), // Limit to top 3 reasons
+          matchReasons: matchReasons.slice(0, 3),
           externalIds: {
             youtubeTrailerId,
             ...(enrichedAnime.externalIds || {})
@@ -756,7 +880,7 @@ async function handleGetRecommendations(req: http.IncomingMessage, res: http.Ser
           id: String(anime.id),
           title: anime.title,
           imageUrls: {
-            poster: anime.image.large || anime.image.medium ||
+            poster: anime.image?.large || anime.image?.medium ||
                    `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(anime.title)}`
           },
           genres: anime.genres || [],
@@ -1048,7 +1172,7 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
     // Try to get real anime details
     console.log(`Fetching details for anime ID: ${animeId}`);
 
-    let animeDetails;
+    let animeDetails: NormalizedAnime;
     try {
       // Convert string ID to numeric ID
       const numericId = parseInt(animeId, 10);
@@ -1057,22 +1181,25 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
       }
 
       // Get anime details from API
-      animeDetails = await apiAdapter.getAnimeDetails(numericId);
+      const details = await apiAdapter.getAnimeDetails(numericId);
 
       // If not found, throw error to use fallback
-      if (!animeDetails) {
+      if (!details) {
         throw new Error('Anime not found');
       }
 
+      // Normalize the details
+      animeDetails = normalizeAnime(details);
+
       // Enrich with trailer if possible
-      animeDetails = await apiAdapter.enrichWithTrailer(animeDetails);
+      animeDetails = await enrichWithTrailer(animeDetails);
     } catch (error) {
       console.error('Error fetching anime details from API:', error);
 
       // Fallback to hardcoded data if API call fails
       console.log('Using fallback anime details');
-      animeDetails = {
-        id: parseInt(animeId, 10),
+      animeDetails = normalizeAnime({
+        id: animeId,
         title: animeId === '1' ? 'Fullmetal Alchemist: Brotherhood' :
                animeId === '2' ? 'Steins;Gate' : 'Violet Evergarden',
         alternativeTitles: ['Japanese Title', 'English Title'],
@@ -1089,11 +1216,6 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
         synopsis: 'Sample synopsis for the selected anime.',
         score: 9.1,
         genres: ['Action', 'Adventure', 'Drama'],
-        episodeCount: 24,
-        format: 'TV',
-        status: 'FINISHED',
-        seasonYear: 2020,
-        season: 'SPRING',
         trailer: animeId === '1' ? 'https://youtube.com/watch?v=--IcmZkvL0Q' :
                  animeId === '2' ? 'https://youtube.com/watch?v=27OZc-ku6is' :
                  'https://youtube.com/watch?v=0CJeDetA45Q',
@@ -1101,73 +1223,11 @@ async function handleGetAnimeDetails(req: http.IncomingMessage, res: http.Server
           youtubeTrailerId: animeId === '1' ? '--IcmZkvL0Q' :
                             animeId === '2' ? '27OZc-ku6is' : '0CJeDetA45Q'
         }
-      };
-    }
-
-    // Extract YouTube ID from trailer URL
-    let youtubeTrailerId = null;
-    if (animeDetails.trailer) {
-      const match = animeDetails.trailer.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-      youtubeTrailerId = match ? match[1] : null;
+      });
     }
 
     // Format response
-    const formattedDetails = {
-      id: String(animeDetails.id),
-      title: animeDetails.title,
-      alternativeTitles: animeDetails.alternativeTitles || [],
-      synopsis: animeDetails.synopsis || 'No synopsis available.',
-      genres: animeDetails.genres || [],
-      year: animeDetails.seasonYear || 2020,
-      season: animeDetails.season || 'SPRING',
-      episodeCount: animeDetails.episodeCount || 12,
-      rating: animeDetails.score || 8.5,
-      popularity: animeDetails.popularity || 90,
-      imageUrls: {
-        poster: animeDetails.image?.large || animeDetails.image?.medium ||
-               `https://placehold.co/300x450/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`,
-        banner: `https://placehold.co/1000x250/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`,
-        thumbnail: animeDetails.image?.medium ||
-                 `https://placehold.co/150x200/25163c/ffffff?text=${encodeURIComponent(animeDetails.title)}`
-      },
-      externalIds: {
-        ...(animeDetails.externalIds || {}),
-        youtubeTrailerId: youtubeTrailerId ||
-                          (animeDetails.externalIds?.youtubeTrailerId || null)
-      },
-      matchScore: 8 + Math.random() * 2, // Random match score between 8-10
-      matchReasons: [
-        {
-          dimension: 'narrativeComplexity',
-          strength: 0.75 + Math.random() * 0.25,
-          explanation: 'The narrative complexity matches your preference for intricate stories.'
-        },
-        {
-          dimension: 'characterDepth',
-          strength: 0.7 + Math.random() * 0.3,
-          explanation: 'The character development aligns with your interest in complex characters.'
-        },
-        {
-          dimension: 'visualStyle',
-          strength: 0.8 + Math.random() * 0.2,
-          explanation: 'The visual aesthetics match your preferred style.'
-        }
-      ],
-      similarTitles: [
-        {
-          id: animeId === '1' ? '2' : '1',
-          title: animeId === '1' ? 'Steins;Gate' : 'Fullmetal Alchemist: Brotherhood',
-          imageUrl: `https://placehold.co/150x200/25163c/ffffff?text=${encodeURIComponent(
-            animeId === '1' ? 'Steins;Gate' : 'Fullmetal Alchemist: Brotherhood'
-          )}`
-        },
-        {
-          id: '3',
-          title: 'Violet Evergarden',
-          imageUrl: 'https://placehold.co/150x200/25163c/ffffff?text=Violet+Evergarden'
-        }
-      ]
-    };
+    const formattedDetails = formatAnimeResponse(animeDetails);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(formattedDetails));

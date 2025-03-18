@@ -5,7 +5,7 @@
  * user preferences and build their psychological profile.
  */
 
-import type { Question, QuestionOption } from './types';
+import type { Question, QuestionOption } from './types.js';
 
 export interface QuestionWithDimensions extends Question {
   targetDimensions: string[];

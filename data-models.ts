@@ -173,8 +173,6 @@ interface MCPContext {
 
 // Export all models
 export type {
-  PsychologicalDimension,
-  DimensionSet,
   UserProfile,
   OptionMapping,
   QuestionOption,

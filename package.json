@@ -16,7 +16,7 @@
     "preview-ui": "cd ui/ui && npm run preview",
     "deploy-api": "wrangler deploy",
     "dev-api": "wrangler dev",
-    "build-api": "tsc",
+    "build-api": "tsc && cp -r api dist/",
     "build": "npm run build-ui && npm run build-api"
   },
   "dependencies": {

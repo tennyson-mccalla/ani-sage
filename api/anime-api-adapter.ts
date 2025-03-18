@@ -10,7 +10,7 @@ import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/
 import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client.js';
 import { YouTubeClient } from './providers/youtube/client.js';
 import { TMDbClient, TVDetails as TMDbTVDetails } from './providers/tmdb/client.js';
-import { BaseAPIClient } from './core/client';
+import { BaseAPIClient } from './core/client.js';
 
 // Unified anime model that works across different providers
 export interface AnimeTitle {

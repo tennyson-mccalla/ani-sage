@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
-import { neon } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
+import { Question, QuestionOption, Profile, Session } from './types.js';
 
 // Initialize Redis client
 const redis = new Redis({
@@ -8,7 +9,7 @@ const redis = new Redis({
 });
 
 // Initialize Postgres client
-const sql = neon(process.env.POSTGRES_URL || '');
+const sql = Pool(process.env.POSTGRES_URL || '');
 
 // Database schema
 const schema = `

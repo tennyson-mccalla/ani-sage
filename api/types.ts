@@ -1,3 +1,5 @@
+import type { AnimeTitle } from './anime-api-adapter.js';
+
 export interface QuestionOptionMapping {
   dimension: string;
   value: number;
@@ -46,21 +48,6 @@ export interface APIResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
-}
-
-export interface AnimeTitle {
-  id: string;
-  title: string;
-  alternativeTitles: string[];
-  image?: {
-    medium: string;
-    large: string;
-  };
-  synopsis: string;
-  score: number;
-  genres?: string[];
-  trailer?: string;
-  externalIds?: Record<string, string>;
 }
 
 export interface AnimeAttributes {
