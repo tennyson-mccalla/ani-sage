@@ -60,11 +60,20 @@ async function handleSession() {
       intellectualEmotional: 0.1,
       noveltyFamiliarity: 0.1,
     },
-    answeredQuestions: []
+    answeredQuestions: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const session: Session = {
+    id: sessionId,
+    profileId,
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 
   await db.createProfile(profile);
-  await db.createSession(sessionId, profileId);
+  await db.createSession(session);
 
   return NextResponse.json({
     sessionId,
@@ -191,7 +200,9 @@ async function handleGetQuestions(req: NextRequest) {
       options: q.options.map((opt: QuestionOption) => ({
         id: opt.id,
         text: opt.text,
-        imageUrl: opt.imageUrl
+        imageUrl: opt.imageUrl,
+        dimensionUpdates: opt.dimensionUpdates,
+        confidenceUpdates: opt.confidenceUpdates
       })),
       stage: q.stage
     }));
@@ -274,33 +285,7 @@ async function handleSubmitAnswer(req: NextRequest) {
     }
 
     // Update profile
-    const updatedProfile = { ...profile };
-    updatedProfile.answeredQuestions.push(questionId);
-
-    // Update dimensions based on the answer
-    if (option.dimensionUpdates) {
-      Object.entries(option.dimensionUpdates).forEach(([dimension, update]) => {
-        if (updatedProfile.dimensions[dimension] !== undefined) {
-          updatedProfile.dimensions[dimension] = Math.max(0, Math.min(10,
-            updatedProfile.dimensions[dimension] + update
-          ));
-        }
-      });
-    }
-
-    // Update confidences
-    if (option.confidenceUpdates) {
-      Object.entries(option.confidenceUpdates).forEach(([dimension, update]) => {
-        if (updatedProfile.confidences[dimension] !== undefined) {
-          updatedProfile.confidences[dimension] = Math.max(0, Math.min(1,
-            updatedProfile.confidences[dimension] + update
-          ));
-        }
-      });
-    }
-
-    // Save updated profile
-    await db.updateProfile(session.profileId, updatedProfile);
+    const updatedProfile = await updateProfileWithAnswer(profile, questionId, optionId);
 
     return NextResponse.json({
       success: true,
@@ -454,7 +439,7 @@ async function handleGetAnimeDetails(req: NextRequest) {
     }
 
     // Get anime details from the API adapter
-    const details = await apiAdapter.getAnimeDetails(animeId);
+    const details = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
 
     return NextResponse.json({ anime: details }, { headers: corsHeaders() });
   } catch (error) {
@@ -470,62 +455,227 @@ async function handleGetAnimeDetails(req: NextRequest) {
   }
 }
 
-// Main handler for all API routes
-export async function GET(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
+// Get profile for session
+async function getProfileForSession(session: Session): Promise<Profile> {
+  const profile = await db.getProfile(session.profileId);
+  if (!profile) {
+    throw new Error(`Profile not found for session: ${session.id}`);
+  }
+  return profile;
+}
 
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 204,
-      headers: corsHeaders()
-    });
+// Get next question
+async function getNextQuestion(profile: Profile): Promise<Question | null> {
+  const unansweredQuestions = questions.filter(q => !profile.answeredQuestions.includes(q.id));
+  if (unansweredQuestions.length === 0) {
+    return null;
   }
 
-  // API routing
-  if (pathname === '/api/v1/session') {
-    return handleSession();
-  } else if (pathname === '/api/v1/questions') {
-    return handleGetQuestions(req);
-  } else if (pathname.match(/^\/api\/v1\/questions\/[\w-]+\/answer$/)) {
-    return handleSubmitAnswer(req);
-  } else if (pathname === '/api/v1/profile') {
-    return handleGetProfile(req);
-  } else if (pathname === '/api/v1/recommendations') {
-    return handleGetRecommendations(req);
-  } else if (pathname.match(/^\/api\/v1\/recommendations\/[\w-]+$/)) {
-    return handleGetAnimeDetails(req);
-  } else {
-    return NextResponse.json({
-      error: 'not_found',
-      message: 'Endpoint not found'
-    }, {
-      status: 404,
-      headers: corsHeaders()
-    });
+  // Group questions by stage
+  const stages = Array.from(new Set(unansweredQuestions.map(q => q.stage))).sort();
+  const earliestStage = stages[0];
+  const stageQuestions = unansweredQuestions.filter(q => q.stage === earliestStage);
+
+  // Filter questions based on target dimensions
+  const targetDimensions = Object.keys(profile.dimensions).filter(d =>
+    profile.confidences[d] < 0.7
+  );
+
+  const relevantQuestions = stageQuestions.filter(q =>
+    q.targetDimensions.some(d => targetDimensions.includes(d))
+  );
+
+  if (relevantQuestions.length === 0) {
+    return stageQuestions[0];
+  }
+
+  // Select a random question from the relevant ones
+  const randomIndex = Math.floor(Math.random() * relevantQuestions.length);
+  const selectedQuestion = relevantQuestions[randomIndex];
+
+  return {
+    id: selectedQuestion.id,
+    text: selectedQuestion.text,
+    type: selectedQuestion.type,
+    stage: selectedQuestion.stage,
+    targetDimensions: selectedQuestion.targetDimensions,
+    options: selectedQuestion.options.map(opt => ({
+      id: opt.id,
+      text: opt.text,
+      value: opt.value,
+      imageUrl: opt.imageUrl,
+      mappings: opt.mappings || []
+    })),
+    description: selectedQuestion.description,
+    imageUrl: selectedQuestion.imageUrl
+  };
+}
+
+// Update profile based on answer
+async function updateProfileWithAnswer(profile: Profile, questionId: string, selectedOptionId: string): Promise<Profile> {
+  const question = questions.find(q => q.id === questionId);
+  if (!question) {
+    throw new Error(`Question not found: ${questionId}`);
+  }
+
+  const selectedOption = question.options.find(opt => opt.id === selectedOptionId);
+  if (!selectedOption) {
+    throw new Error(`Option not found: ${selectedOptionId}`);
+  }
+
+  const updatedProfile: Profile = {
+    ...profile,
+    answeredQuestions: [...profile.answeredQuestions, questionId],
+    updatedAt: new Date()
+  };
+
+  // Update dimensions based on option mappings
+  if (selectedOption.mappings) {
+    for (const mapping of selectedOption.mappings) {
+      const { dimension, value } = mapping;
+      updatedProfile.dimensions[dimension] = (updatedProfile.dimensions[dimension] || 0) + value;
+    }
+  }
+
+  // Update confidences based on option mappings
+  if (selectedOption.mappings) {
+    for (const mapping of selectedOption.mappings) {
+      const { dimension } = mapping;
+      updatedProfile.confidences[dimension] = Math.max(0, Math.min(1,
+        (updatedProfile.confidences[dimension] || 0) + 0.1
+      ));
+    }
+  }
+
+  // Save updated profile
+  await db.updateProfile(updatedProfile);
+
+  return updatedProfile;
+}
+
+// Get recommendations based on profile
+async function getRecommendations(session: Session, count: number = 10): Promise<any[]> {
+  const profile = await getProfileForSession(session);
+  const apiAdapter = createApiAdapter();
+
+  const recommendations = await apiAdapter.getRecommendations({
+    dimensions: profile.dimensions,
+    count
+  });
+
+  return recommendations;
+}
+
+// Get anime details
+async function getAnimeDetails(animeId: string): Promise<any> {
+  const apiAdapter = createApiAdapter();
+  const details = await apiAdapter.getAnimeDetails(parseInt(animeId, 10));
+  return details;
+}
+
+// Main handler for all API routes
+export async function GET(request: Request) {
+  try {
+    const sessionId = request.headers.get('x-session-id');
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+    }
+
+    const session = await db.getSession(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const profile = await db.getProfileForSession(sessionId);
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    const nextQuestion = await getNextQuestion(profile);
+    return NextResponse.json({ profile, nextQuestion }, { headers: corsHeaders() });
+  } catch (error) {
+    console.error('Error in GET handler:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders() });
   }
 }
 
-export async function POST(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
+// Handle POST requests
+export async function POST(request: Request) {
+  try {
+    const sessionId = request.headers.get('x-session-id');
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+    }
 
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 204,
-      headers: corsHeaders()
-    });
+    const body = await request.json();
+    const { questionId, selectedOptionId } = body;
+
+    if (questionId && selectedOptionId) {
+      const session = await db.getSession(sessionId);
+      if (!session) {
+        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      }
+
+      const profile = await db.getProfileForSession(sessionId);
+      if (!profile) {
+        return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      }
+
+      const updatedProfile = await updateProfileWithAnswer(profile, questionId, selectedOptionId);
+      await db.updateProfile(updatedProfile);
+
+      const nextQuestion = await getNextQuestion(updatedProfile);
+      return NextResponse.json({ profile: updatedProfile, nextQuestion }, { headers: corsHeaders() });
+    } else {
+      // Create new session and profile
+      const profileId = Math.random().toString(36).substring(2);
+      const profile: Profile = {
+        id: profileId,
+        dimensions: {},
+        confidences: {},
+        answeredQuestions: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const session: Session = {
+        id: sessionId,
+        profileId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      await db.createProfile(profile);
+      await db.createSession(session);
+
+      const nextQuestion = await getNextQuestion(profile);
+      return NextResponse.json({ profile, nextQuestion }, { headers: corsHeaders() });
+    }
+  } catch (error) {
+    console.error('Error in POST handler:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders() });
   }
+}
 
-  if (pathname.match(/^\/api\/v1\/questions\/[\w-]+\/answer$/)) {
-    return handleSubmitAnswer(req);
+// Handle recommendations request
+export async function getRecommendationsHandler(request: NextRequest) {
+  try {
+    const sessionId = request.nextUrl.searchParams.get('sessionId');
+    const count = request.nextUrl.searchParams.get('count');
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Missing sessionId parameter' }, { status: 400 });
+    }
+
+    const session = await db.getSession(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const recommendations = await getRecommendations(session, count ? parseInt(count, 10) : undefined);
+    return NextResponse.json({ recommendations });
+  } catch (error) {
+    console.error('Error getting recommendations:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json({
-    error: 'not_found',
-    message: 'Endpoint not found'
-  }, {
-    status: 404,
-    headers: corsHeaders()
-  });
 }
