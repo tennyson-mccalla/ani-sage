@@ -9,7 +9,7 @@
  * - Queue/delay mechanism to prevent hitting rate limits
  */
 
-import { rateLimitManager } from './rate-limits.js';
+import { rateLimitManager } from './rate-limits';
 
 // Response model
 export interface APIResponse<T = any> {
