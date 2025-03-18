@@ -3,14 +3,14 @@
   "outputDirectory": "ui/ui",
   "builds": [
     {
-      "src": "api/**/*.ts",
+      "src": "api/v1/route.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/v1/(.*)",
+      "dest": "/api/v1/route.ts"
     },
     {
       "src": "/(.*)",

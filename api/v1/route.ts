@@ -187,7 +187,7 @@ async function handleGetQuestions(req: NextRequest) {
       text: q.text,
       description: q.description,
       imageUrl: q.imageUrl,
-      options: q.options.map((opt: any) => ({
+      options: q.options.map((opt: { id: string; text: string; imageUrl?: string }) => ({
         id: opt.id,
         text: opt.text,
         imageUrl: opt.imageUrl

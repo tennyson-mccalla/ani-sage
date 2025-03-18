@@ -266,9 +266,10 @@ export class BaseAPIClient {
 
       // Extract error details if available
       if (typeof responseData === 'object' && responseData !== null) {
-        if (responseData.error || responseData.message) {
-          const errorDetails = responseData.error ? `${responseData.error}: ` : '';
-          const errorMessage = responseData.message || '';
+        const errorData = responseData as { error?: string; message?: string };
+        if (errorData.error || errorData.message) {
+          const errorDetails = errorData.error ? `${errorData.error}: ` : '';
+          const errorMessage = errorData.message || '';
           errorMsg = `${errorMsg} - ${errorDetails}${errorMessage}`;
         }
       } else if (responseData) {
