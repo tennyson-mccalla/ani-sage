@@ -2,24 +2,21 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "framework": "nextjs",
   "builds": [
     {
-      "src": "api/v1/route.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "ui/ui/**",
-      "use": "@vercel/static"
+      "src": "app/**",
+      "use": "@vercel/next"
     }
   ],
   "routes": [
     {
       "src": "/api/v1/(.*)",
-      "dest": "/api/v1/route.js"
+      "dest": "/api/v1/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/ui/ui/$1"
+      "dest": "/$1"
     }
   ]
 }

@@ -7,17 +7,15 @@
   "scripts": {
     "test": "jest",
     "start": "./start-ani-sage.sh",
-    "start-api": "NODE_OPTIONS='--loader ts-node/esm' node api/server.ts",
+    "start-api": "next dev",
     "demo": "ts-node api-integration-demo.ts",
     "api-demo": "ts-node api/demo.ts",
     "recommendation-demo": "ts-node recommendation-demo.ts",
-    "ui": "cd ui/ui && npm run dev",
-    "build-ui": "cd ui/ui && npm run build",
-    "preview-ui": "cd ui/ui && npm run preview",
+    "dev": "next dev",
+    "build": "next build",
+    "start-prod": "next start",
     "deploy-api": "wrangler deploy",
-    "dev-api": "wrangler dev",
-    "build-api": "tsc && cp -r api dist/",
-    "build": "npm run build-ui && npm run build-api"
+    "dev-api": "wrangler dev"
   },
   "dependencies": {
     "@modelcontextprotocol/server-github": "^2025.1.23",
