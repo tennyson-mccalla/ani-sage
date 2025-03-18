@@ -189,65 +189,96 @@ function getMappingsForOption(
 export function getEmptySampleQuestions(): QuestionWithDimensions[] {
   return [
     {
-      id: 'visual-style',
-      type: 'image',
-      text: 'Which visual style do you prefer in anime?',
-      targetDimensions: ['visualComplexity', 'colorSaturation'],
-      stage: 1,
-      options: [
-        { id: 'clean-simple', text: 'Clean and simple visuals, with emphasis on character expressions', mappings: [] },
-        { id: 'balanced', text: 'Balanced visuals with moderate detail', mappings: [] },
-        { id: 'detailed', text: 'Highly detailed and intricate visuals', mappings: [] },
-        { id: 'dynamic', text: 'Dynamic and energetic visuals with lots of movement', mappings: [] }
-      ]
-    },
-    {
-      id: 'narrative-complexity',
+      id: 'visual_complexity_1',
       type: 'text',
-      text: 'How do you feel about complex storylines?',
-      targetDimensions: ['narrativeComplexity', 'plotPredictability'],
+      text: 'How do you prefer your anime visuals?',
       stage: 1,
+      targetDimensions: ['visualComplexity'],
       options: [
-        { id: 'low-complexity', text: 'I prefer straightforward stories that are easy to follow', mappings: [] },
-        { id: 'medium-complexity', text: 'I enjoy some complexity but don\'t want to feel lost', mappings: [] },
-        { id: 'high-complexity', text: 'I love intricate plots with multiple layers and twists', mappings: [] }
+        {
+          id: 'simple',
+          text: 'Clean and minimalist',
+          mappings: [
+            { dimension: 'visualComplexity', value: 3, confidence: 0.7 }
+          ]
+        },
+        {
+          id: 'balanced',
+          text: 'Balanced detail',
+          mappings: [
+            { dimension: 'visualComplexity', value: 5, confidence: 0.7 }
+          ]
+        },
+        {
+          id: 'detailed',
+          text: 'Rich and detailed',
+          mappings: [
+            { dimension: 'visualComplexity', value: 8, confidence: 0.7 }
+          ]
+        }
       ]
     },
     {
-      id: 'character-depth',
+      id: 'narrative_complexity_1',
       type: 'text',
-      text: 'What kind of characters do you connect with most?',
-      targetDimensions: ['characterComplexity', 'characterGrowth'],
+      text: 'What kind of story complexity do you enjoy?',
       stage: 1,
+      targetDimensions: ['narrativeComplexity'],
       options: [
-        { id: 'simple-characters', text: 'Clear, straightforward characters with defined traits', mappings: [] },
-        { id: 'balanced-characters', text: 'Characters with some depth but still relatable', mappings: [] },
-        { id: 'complex-characters', text: 'Deep, nuanced characters with internal conflicts and growth', mappings: [] }
+        {
+          id: 'straightforward',
+          text: 'Simple and straightforward',
+          mappings: [
+            { dimension: 'narrativeComplexity', value: 3, confidence: 0.7 }
+          ]
+        },
+        {
+          id: 'moderate',
+          text: 'Moderately complex',
+          mappings: [
+            { dimension: 'narrativeComplexity', value: 6, confidence: 0.7 }
+          ]
+        },
+        {
+          id: 'complex',
+          text: 'Complex and layered',
+          mappings: [
+            { dimension: 'narrativeComplexity', value: 9, confidence: 0.7 }
+          ]
+        }
       ]
     },
     {
-      id: 'moral-ambiguity',
-      type: 'scenario',
-      text: 'In stories, do you prefer:',
-      targetDimensions: ['moralAmbiguity'],
-      stage: 2,
+      id: 'emotional_intensity_1',
+      type: 'text',
+      text: 'How emotionally intense do you like your anime?',
+      stage: 1,
+      targetDimensions: ['emotionalIntensity', 'emotionalValence'],
       options: [
-        { id: 'clear-morals', text: 'Clear heroes and villains with defined moral boundaries', mappings: [] },
-        { id: 'nuanced-morals', text: 'Characters with understandable motivations even when doing wrong', mappings: [] },
-        { id: 'ambiguous', text: 'Morally ambiguous situations where right and wrong aren\'t clear', mappings: [] }
-      ]
-    },
-    {
-      id: 'emotional-tone',
-      type: 'preference',
-      text: 'Which emotional tone do you prefer in stories?',
-      targetDimensions: ['emotionalValence', 'emotionalIntensity'],
-      stage: 2,
-      options: [
-        { id: 'light-optimistic', text: 'Light and optimistic', mappings: [] },
-        { id: 'exciting-uplifting', text: 'Exciting and uplifting', mappings: [] },
-        { id: 'dark-serious', text: 'Dark and serious', mappings: [] },
-        { id: 'bittersweet-reflective', text: 'Bittersweet and reflective', mappings: [] }
+        {
+          id: 'mild',
+          text: 'Mild and gentle',
+          mappings: [
+            { dimension: 'emotionalIntensity', value: 3, confidence: 0.7 },
+            { dimension: 'emotionalValence', value: 2, confidence: 0.6 }
+          ]
+        },
+        {
+          id: 'moderate',
+          text: 'Moderately emotional',
+          mappings: [
+            { dimension: 'emotionalIntensity', value: 6, confidence: 0.7 },
+            { dimension: 'emotionalValence', value: 0, confidence: 0.6 }
+          ]
+        },
+        {
+          id: 'intense',
+          text: 'Very emotional and intense',
+          mappings: [
+            { dimension: 'emotionalIntensity', value: 9, confidence: 0.7 },
+            { dimension: 'emotionalValence', value: -1, confidence: 0.5 }
+          ]
+        }
       ]
     }
   ];

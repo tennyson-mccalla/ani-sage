@@ -43,8 +43,8 @@ export interface AnimeDetails {
   title: string;
   main_picture?: MainPicture;
   alternative_titles?: AlternativeTitles;
-  synopsis?: string;
-  mean?: number;
+  synopsis: string;
+  mean: number;
   rank?: number;
   genres?: Genre[];
   media_type?: string;
@@ -57,6 +57,7 @@ export interface AnimeDetails {
   rating?: string;
   studios?: Array<Record<string, any>>;
   statistics?: Record<string, any>;
+  image_url?: string;
 }
 
 export interface AnimeStatus {
