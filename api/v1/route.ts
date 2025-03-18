@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AnimeApiAdapter } from '../../anime-api-adapter';
-import { createApiAdapter } from '../../index';
-import { questions } from '../../question-bank';
-import { db, initDatabase } from '../../db';
-import { Question, QuestionOption, Profile, Session } from '../../types';
+import { AnimeApiAdapter } from '../anime-api-adapter';
+import { createApiAdapter } from '../index';
+import { questions } from '../question-bank';
+import { db, initDatabase } from '../db';
+import { Question, QuestionOption, Profile, Session } from '../types';
 
 // Initialize API adapter with configuration
 const apiAdapter = createApiAdapter();
@@ -195,14 +195,15 @@ async function handleGetQuestions(req: NextRequest) {
       id: q.id,
       type: q.type || 'text',
       text: q.text,
-      description: q.description,
-      imageUrl: q.imageUrl,
+      description: q.description || '',
+      imageUrl: q.imageUrl || '',
       options: q.options.map((opt: QuestionOption) => ({
         id: opt.id,
         text: opt.text,
-        imageUrl: opt.imageUrl,
-        dimensionUpdates: opt.dimensionUpdates,
-        confidenceUpdates: opt.confidenceUpdates
+        imageUrl: opt.imageUrl || '',
+        value: opt.value || 0,
+        dimensionUpdates: opt.dimensionUpdates || {},
+        confidenceUpdates: opt.confidenceUpdates || {}
       })),
       stage: q.stage
     }));
@@ -477,7 +478,7 @@ async function getNextQuestion(profile: Profile): Promise<Question | null> {
   const stageQuestions = unansweredQuestions.filter(q => q.stage === earliestStage);
 
   // Filter questions based on target dimensions
-  const targetDimensions = Object.keys(profile.dimensions).filter(d =>
+  const targetDimensions = Object.keys(profile.dimensions).filter((d: string) =>
     profile.confidences[d] < 0.7
   );
 
@@ -502,12 +503,12 @@ async function getNextQuestion(profile: Profile): Promise<Question | null> {
     options: selectedQuestion.options.map(opt => ({
       id: opt.id,
       text: opt.text,
-      value: opt.value,
-      imageUrl: opt.imageUrl,
+      value: opt.value || 0,
+      imageUrl: opt.imageUrl || '',
       mappings: opt.mappings || []
     })),
-    description: selectedQuestion.description,
-    imageUrl: selectedQuestion.imageUrl
+    description: selectedQuestion.description || '',
+    imageUrl: selectedQuestion.imageUrl || ''
   };
 }
 
