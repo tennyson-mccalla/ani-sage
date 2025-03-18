@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AnimeApiAdapter, ApiProvider } from '../../anime-api-adapter.js';
+import { AnimeApiAdapter } from '../../anime-api-adapter.js';
 import { createApiAdapter } from '../../index.js';
 import { questions } from '../../question-bank.js';
 import { db, initDatabase } from '../../db.js';
+import { Question, QuestionOption, Profile, Session } from '../../types.js';
 
 // Initialize API adapter with configuration
 const apiAdapter = createApiAdapter();
@@ -25,7 +26,7 @@ async function handleSession() {
   const profileId = `profile_${Date.now()}`;
 
   // Create a new profile
-  const profile = {
+  const profile: Profile = {
     id: profileId,
     dimensions: {
       visualComplexity: 5,
@@ -117,19 +118,19 @@ async function handleGetQuestions(req: NextRequest) {
     }
 
     // Filter questions by stage if specified
-    let availableQuestions: any[] = questions;
+    let availableQuestions: Question[] = questions;
     if (stage) {
       const stageNum = parseInt(stage, 10);
-      availableQuestions = questions.filter((q: any) => q.stage === stageNum);
+      availableQuestions = questions.filter(q => q.stage === stageNum);
       console.log(`Filtered to ${availableQuestions.length} questions for stage ${stageNum}`);
     }
 
     // Filter out questions that have already been answered
-    availableQuestions = availableQuestions.filter((q: any) => !profile.answeredQuestions.includes(q.id));
+    availableQuestions = availableQuestions.filter(q => !profile.answeredQuestions.includes(q.id));
     console.log(`${availableQuestions.length} questions available after filtering answered questions`);
 
     // If we have a user profile with dimensions and confidences, we can use it to select questions
-    let selectedQuestions: any[] = [];
+    let selectedQuestions: Question[] = [];
 
     if (profile.confidences) {
       // Sort dimensions by confidence ascending
@@ -148,8 +149,8 @@ async function handleGetQuestions(req: NextRequest) {
       console.log(`Targeting dimensions with lowest confidence: ${targetDimensions.join(', ')}`);
 
       // Find questions that target these dimensions
-      const targetingQuestions = availableQuestions.filter((q: any) =>
-        q.targetDimensions && q.targetDimensions.some((d: string) => targetDimensions.includes(d))
+      const targetingQuestions = availableQuestions.filter(q =>
+        q.targetDimensions && q.targetDimensions.some(d => targetDimensions.includes(d))
       );
 
       if (targetingQuestions.length > 0) {
@@ -171,7 +172,7 @@ async function handleGetQuestions(req: NextRequest) {
       const randomIndex = Math.floor(Math.random() * availableQuestions.length);
       const question = availableQuestions[randomIndex];
 
-      if (!selectedQuestions.find((q: any) => q.id === question.id)) {
+      if (!selectedQuestions.find(q => q.id === question.id)) {
         selectedQuestions.push(question);
       }
 
@@ -181,13 +182,13 @@ async function handleGetQuestions(req: NextRequest) {
     console.log(`Selected ${selectedQuestions.length} questions`);
 
     // Format questions for the frontend
-    const formattedQuestions = selectedQuestions.map((q: any) => ({
+    const formattedQuestions = selectedQuestions.map(q => ({
       id: q.id,
       type: q.type || 'text',
       text: q.text,
       description: q.description,
       imageUrl: q.imageUrl,
-      options: q.options.map((opt: { id: string; text: string; imageUrl?: string }) => ({
+      options: q.options.map((opt: QuestionOption) => ({
         id: opt.id,
         text: opt.text,
         imageUrl: opt.imageUrl
@@ -281,7 +282,7 @@ async function handleSubmitAnswer(req: NextRequest) {
       Object.entries(option.dimensionUpdates).forEach(([dimension, update]) => {
         if (updatedProfile.dimensions[dimension] !== undefined) {
           updatedProfile.dimensions[dimension] = Math.max(0, Math.min(10,
-            updatedProfile.dimensions[dimension] + (update as number)
+            updatedProfile.dimensions[dimension] + update
           ));
         }
       });
@@ -292,7 +293,7 @@ async function handleSubmitAnswer(req: NextRequest) {
       Object.entries(option.confidenceUpdates).forEach(([dimension, update]) => {
         if (updatedProfile.confidences[dimension] !== undefined) {
           updatedProfile.confidences[dimension] = Math.max(0, Math.min(1,
-            updatedProfile.confidences[dimension] + (update as number)
+            updatedProfile.confidences[dimension] + update
           ));
         }
       });
