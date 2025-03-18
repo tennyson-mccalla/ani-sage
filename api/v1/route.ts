@@ -1,5 +1,5 @@
 import { AnimeApiAdapter } from '../anime-api-adapter';
-import { createApiAdapter } from '../index';
+import { createApiAdapter } from '../index.js';
 import { questions } from '../question-bank';
 import { db, initDatabase } from '../db';
 import { Question, QuestionOption, Profile, Session } from '../types';
