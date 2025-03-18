@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiAdapter } from '@/app/lib/anime-api-adapter';
+import { corsHeaders } from '@/app/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,10 @@ export async function GET(
       return NextResponse.json({
         error: 'bad_request',
         message: 'Missing anime ID'
-      }, { status: 400 });
+      }, {
+        status: 400,
+        headers: corsHeaders()
+      });
     }
 
     const apiAdapter = createApiAdapter();
@@ -22,16 +26,22 @@ export async function GET(
       return NextResponse.json({
         error: 'not_found',
         message: 'Anime not found'
-      }, { status: 404 });
+      }, {
+        status: 404,
+        headers: corsHeaders()
+      });
     }
 
-    return NextResponse.json({ anime: details });
+    return NextResponse.json({ anime: details }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error getting anime details:', error);
     return NextResponse.json({
       error: 'server_error',
       message: 'Error retrieving anime details',
       details: String(error)
-    }, { status: 500 });
+    }, {
+      status: 500,
+      headers: corsHeaders()
+    });
   }
 }
