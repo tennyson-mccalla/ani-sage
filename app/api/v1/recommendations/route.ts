@@ -639,8 +639,11 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
     }
   ];
   
-  // Define a type for our anime entries
-  type MockAnimeEntry = typeof animeDatabase[0] & { matchScore?: number };
+  // Define a type for our anime entries with all possible properties
+  type MockAnimeEntry = typeof animeDatabase[0] & { 
+    matchScore?: number;
+    imageUrl?: string; // Add imageUrl for compatibility with the mapping code
+  };
   let animeList: MockAnimeEntry[] = [];
   
   try {
