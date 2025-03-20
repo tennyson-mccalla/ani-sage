@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 import { corsHeaders } from '@/app/lib/utils';
+
+// Set dynamic runtime to handle URL search parameters
+export const dynamic = 'force-dynamic';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(): Promise<Response> {

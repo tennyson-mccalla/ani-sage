@@ -6,6 +6,9 @@ import { calculateMatchScore, getMatchExplanations } from '@/app/lib/anime-attri
 import malSyncClient from '@/app/lib/utils/malsync/client';
 import { VideoId } from '@/app/lib/providers/youtube/client';
 
+// Set dynamic runtime to handle URL search parameters
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     console.log("GET /api/v1/recommendations called");

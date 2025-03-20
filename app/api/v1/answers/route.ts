@@ -3,6 +3,9 @@ import { db } from '@/app/lib/db';
 import { questions } from '@/app/lib/question-bank';
 import { corsHeaders } from '@/app/lib/utils';
 
+// Set dynamic runtime to handle URL search parameters
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();

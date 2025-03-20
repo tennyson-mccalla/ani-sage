@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiAdapter } from '@/app/lib/anime-api-adapter';
 import { corsHeaders } from '@/app/lib/utils';
 
+// Set dynamic runtime to handle URL parameters
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

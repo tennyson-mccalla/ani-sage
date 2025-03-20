@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 import { corsHeaders } from '@/app/lib/utils';
 
+// Set dynamic runtime to handle URL search parameters
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     console.log("GET /api/v1/profile called");
