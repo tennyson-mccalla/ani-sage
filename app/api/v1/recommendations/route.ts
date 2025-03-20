@@ -639,7 +639,9 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
     }
   ];
   
-  let animeList = [];
+  // Define a type for our anime entries
+  type MockAnimeEntry = typeof animeDatabase[0] & { matchScore?: number };
+  let animeList: MockAnimeEntry[] = [];
   
   try {
     // Calculate match scores based on profile dimensions
