@@ -655,20 +655,26 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
       }
       
       // Calculate distance between profile and anime traits
+      // Define the dimension keys with a type to help TypeScript understand they are valid keys
       const dimensions = [
         'visualComplexity',
         'narrativeComplexity',
         'emotionalIntensity',
         'characterComplexity',
         'moralAmbiguity'
-      ];
+      ] as const;
+      
+      // Define the dimension key type for type safety
+      type DimensionKey = typeof dimensions[number];
       
       let totalDistance = 0;
       let dimensionCount = 0;
       
       dimensions.forEach(dim => {
-        if (profile.dimensions[dim] !== undefined && anime.traits[dim] !== undefined) {
-          const distance = Math.abs(profile.dimensions[dim] - anime.traits[dim]);
+        // Now TypeScript knows dim is a valid key
+        const dimKey = dim as DimensionKey;
+        if (profile!.dimensions[dimKey] !== undefined && anime.traits[dimKey] !== undefined) {
+          const distance = Math.abs(profile!.dimensions[dimKey] - anime.traits[dimKey]);
           totalDistance += distance;
           dimensionCount++;
         }
@@ -698,9 +704,10 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
   // Convert the anime list to the format expected by the frontend
   const recommendations = animeList.map((anime, index) => {
     // Generate custom reasons based on profile and anime traits
-    const reasons = [];
+    const reasons: string[] = [];
     
-    if (profile.dimensions) {
+    // Make sure profile isn't null before accessing its properties
+    if (profile?.dimensions) {
       // Visual complexity
       if (profile.dimensions.visualComplexity !== undefined && 
           Math.abs(profile.dimensions.visualComplexity - anime.traits.visualComplexity) < 2) {
