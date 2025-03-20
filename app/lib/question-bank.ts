@@ -232,7 +232,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'muted',
           text: 'Muted and subtle',
-          imageUrl: 'https://dummyimage.com/300x200/b3b3b3,f5f5f5,dad7cd,adb5bd,7d8597/ffffff&text=Muted+Colors',
+          imageUrl: 'https://dummyimage.com/600x400/b3b3b3,f5f5f5,dad7cd,adb5bd,7d8597/ffffff&text=Muted+Colors',
           mappings: [
             { dimension: 'colorSaturation', value: 3, confidence: 0.7 },
             { dimension: 'visualComplexity', value: 4, confidence: 0.5 }
@@ -241,7 +241,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'balanced_colors',
           text: 'Balanced, natural',
-          imageUrl: 'https://dummyimage.com/300x200/588157,3a5a40,a3b18a,dad7cd,97ba91/ffffff&text=Natural+Colors',
+          imageUrl: 'https://dummyimage.com/600x400/588157,3a5a40,a3b18a,dad7cd,97ba91/ffffff&text=Natural+Colors',
           mappings: [
             { dimension: 'colorSaturation', value: 5, confidence: 0.7 },
             { dimension: 'visualComplexity', value: 5, confidence: 0.5 }
@@ -250,7 +250,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'vibrant',
           text: 'Vibrant and colorful',
-          imageUrl: 'https://dummyimage.com/300x200/f94144,f3722c,f8961e,f9c74f,90be6d,43aa8b,577590/ffffff&text=Vibrant+Colors',
+          imageUrl: 'https://dummyimage.com/600x400/f94144,f3722c,f8961e,f9c74f,90be6d,43aa8b,577590/ffffff&text=Vibrant+Colors',
           mappings: [
             { dimension: 'colorSaturation', value: 8, confidence: 0.7 },
             { dimension: 'visualComplexity', value: 7, confidence: 0.5 }
@@ -820,7 +820,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'minimalist_style',
           text: 'Minimalist style',
-          imageUrl: 'https://dummyimage.com/500x300/f5f5f5/333333&text=Clean,+Simple+Lines',
+          imageUrl: 'https://dummyimage.com/600x400/f5f5f5/333333&text=Clean,+Simple+Lines',
           mappings: [
             { dimension: 'visualComplexity', value: 3, confidence: 0.7 },
             { dimension: 'colorSaturation', value: 4, confidence: 0.7 }
@@ -829,7 +829,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'detailed_fantasy',
           text: 'Rich, detailed fantasy',
-          imageUrl: 'https://dummyimage.com/500x300/8a2be2,7b68ee,9370db,ba55d3/ffffff&text=Detailed+Fantasy+World',
+          imageUrl: 'https://dummyimage.com/600x400/8a2be2,7b68ee,9370db,ba55d3/ffffff&text=Detailed+Fantasy+World',
           mappings: [
             { dimension: 'visualComplexity', value: 8, confidence: 0.7 },
             { dimension: 'colorSaturation', value: 7, confidence: 0.7 }
@@ -838,7 +838,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'realistic_style',
           text: 'Realistic portrayal',
-          imageUrl: 'https://dummyimage.com/500x300/2f4f4f,696969,778899,a9a9a9/ffffff&text=Realistic+Portrayal',
+          imageUrl: 'https://dummyimage.com/600x400/2f4f4f,696969,778899,a9a9a9/ffffff&text=Realistic+Portrayal',
           mappings: [
             { dimension: 'visualComplexity', value: 7, confidence: 0.7 },
             { dimension: 'colorSaturation', value: 5, confidence: 0.7 }
@@ -847,7 +847,7 @@ export function getEmptySampleQuestions(): QuestionWithDimensions[] {
         {
           id: 'abstract_expressive',
           text: 'Bold and expressive',
-          imageUrl: 'https://dummyimage.com/500x300/ff4500,ff6347,ff7f50,ff8c00,ffa500/ffffff&text=Bold+Expression',
+          imageUrl: 'https://dummyimage.com/600x400/ff4500,ff6347,ff7f50,ff8c00,ffa500/ffffff&text=Bold+Expression',
           mappings: [
             { dimension: 'visualComplexity', value: 6, confidence: 0.7 },
             { dimension: 'colorSaturation', value: 8, confidence: 0.7 }

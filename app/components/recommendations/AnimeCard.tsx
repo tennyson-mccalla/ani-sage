@@ -25,6 +25,7 @@ export interface AnimeRecommendation {
   match: number;
   reasons: string[];
   trailer?: string;
+  tmdbImage?: string;
 }
 
 interface AnimeCardProps {
@@ -112,8 +113,13 @@ export default function AnimeCard({ anime, index }: AnimeCardProps) {
           alt={anime.title}
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => {
-            e.currentTarget.onerror = null; 
-            e.currentTarget.src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+            e.currentTarget.onerror = null;
+            // Try to use TMDb image if available, otherwise fall back to colored placeholder
+            if (anime.tmdbImage) {
+              e.currentTarget.src = anime.tmdbImage;
+            } else {
+              e.currentTarget.src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+            }
           }}
         />
         <div className="absolute top-2 right-2 bg-purple-600 text-white text-sm font-bold px-2 py-1 rounded-full">
