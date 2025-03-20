@@ -5,9 +5,9 @@
  * for storing user profiles, anime recommendations, and interaction history.
  */
 
-import { AnimeApiAdapter, type AnimeTitle as ApiAnimeTitle, ApiProvider } from './anime-api-adapter.js';
-import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from './anime-attribute-mapper.js';
-import type { MCPContext, UserProfile, RecommendationSet, RecommendationResult, AnimeTitle as ModelAnimeTitle } from '../data-models.js';
+import { AnimeApiAdapter, type AnimeTitle as ApiAnimeTitle, ApiProvider } from '../app/lib/anime-api-adapter';
+import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from '../app/lib/anime-attribute-mapper';
+import type { MCPContext, UserProfile, RecommendationSet, RecommendationResult, AnimeTitle as ModelAnimeTitle } from '../data-models';
 
 // Type adapter function to convert API AnimeTitle to data model AnimeTitle
 function convertApiAnimeToModelAnime(apiAnime: ApiAnimeTitle): ModelAnimeTitle {

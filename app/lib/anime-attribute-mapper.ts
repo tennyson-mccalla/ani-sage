@@ -6,7 +6,7 @@
  * objective anime metadata and subjective psychological preferences.
  */
 
-import type { AnimeTitle } from './anime-api-adapter.js';
+import type { AnimeTitle } from './anime-api-adapter';
 
 // Genre dimension mappings - how genres correlate to psychological dimensions
 const genreDimensionMappings: Record<string, Record<string, number>> = {

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     availableQuestions = availableQuestions.filter(q => !profile.answeredQuestions.includes(q.id));
 
-    let selectedQuestions = [];
+    let selectedQuestions: typeof availableQuestions = [];
     const targetDimensions = Object.entries(profile.confidences || {})
       .filter(([_, confidence]) => confidence < 0.5)
       .map(([dimension]) => dimension);

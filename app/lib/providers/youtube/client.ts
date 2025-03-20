@@ -6,7 +6,8 @@
  * YouTube API key with quota available.
  */
 
-import { BaseAPIClient, APIResponse } from '.././core/client.js';
+import { BaseAPIClient, APIResponse } from '../../core/client';
+import axios from 'axios';
 
 // YouTube Models
 export interface VideoThumbnail {
@@ -35,11 +36,27 @@ export interface Video {
   statistics?: Record<string, any>;
 }
 
+export interface YouTubeSearchResult {
+  id: {
+    videoId: string;
+  };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: {
+      default: { url: string };
+      medium: { url: string };
+      high: { url: string };
+    };
+  };
+}
+
 /**
  * YouTube Data API client implementation
  */
 export class YouTubeClient extends BaseAPIClient {
-  private apiKey: string;
+  private readonly apiKey: string;
+  private readonly apiBaseUrl = 'https://www.googleapis.com/youtube/v3';
 
   /**
    * Initialize YouTube client with API key
@@ -144,51 +161,81 @@ export class YouTubeClient extends BaseAPIClient {
   /**
    * Search for anime trailers on YouTube
    *
-   * @param animeTitle Anime title to search for
-   * @param maxResults Maximum number of results (default 5)
-   * @returns API response with search results
+   * @param animeName Anime name to search for
+   * @returns URL of the found anime trailer or null if not found
    */
-  public async searchAnimeTrailer(
-    animeTitle: string,
-    maxResults: number = 5
-  ): Promise<APIResponse<Video[]>> {
-    if (!animeTitle) {
-      throw new Error('Anime title cannot be empty');
+  async searchAnimeTrailer(animeName: string): Promise<string | null> {
+    try {
+      // Create multiple search queries with different variations for better results
+      const searchQueries = [
+        `${animeName} official anime trailer`,
+        `${animeName} anime trailer official`,
+        `${animeName} PV`, // Japanese term for promotional video
+        `${animeName} trailer`
+      ];
+      
+      // Try each query until we find a good result
+      for (const searchQuery of searchQueries) {
+        const response = await axios.get(`${this.apiBaseUrl}/search`, {
+          params: {
+            part: 'snippet',
+            q: searchQuery,
+            type: 'video',
+            maxResults: 3, // Get a few results to filter
+            key: this.apiKey,
+            relevanceLanguage: 'en' // Prefer English results
+          }
+        });
+  
+        if (response.data.items && response.data.items.length > 0) {
+          // Look for official trailers first
+          const officialTrailer = response.data.items.find(item => 
+            (item.snippet.title.toLowerCase().includes('official') && 
+             item.snippet.title.toLowerCase().includes('trailer')) ||
+            (item.snippet.channelTitle.toLowerCase().includes('official') ||
+             item.snippet.channelTitle.toLowerCase().includes('aniplex') ||
+             item.snippet.channelTitle.toLowerCase().includes('funimation') ||
+             item.snippet.channelTitle.toLowerCase().includes('crunchyroll'))
+          );
+          
+          // Use official trailer if found, otherwise use the first result
+          const videoItem = officialTrailer || response.data.items[0];
+          const videoId = videoItem.id.videoId;
+          return `https://www.youtube.com/watch?v=${videoId}`;
+        }
+      }
+  
+      return null;
+    } catch (error) {
+      console.error('Error searching YouTube:', error);
+      return null;
     }
-
-    // Craft a search query optimized for finding official trailers
-    const query = `${animeTitle} official trailer anime`;
-
-    return this.searchVideos(query, maxResults);
   }
 
   /**
    * Get detailed information about a specific video
    *
    * @param videoId YouTube video ID
-   * @param part Parts to include in response (default 'snippet,statistics')
-   * @returns API response with video details
+   * @returns Detailed video information or null if not found
    */
-  public async getVideoDetails(
-    videoId: string,
-    part: string = 'snippet,statistics'
-  ): Promise<APIResponse<any>> {
-    if (!videoId) {
-      throw new Error('Video ID cannot be empty');
+  async getVideoDetails(videoId: string): Promise<YouTubeSearchResult | null> {
+    try {
+      const response = await axios.get(`${this.apiBaseUrl}/videos`, {
+        params: {
+          part: 'snippet',
+          id: videoId,
+          key: this.apiKey
+        }
+      });
+
+      if (response.data.items && response.data.items.length > 0) {
+        return response.data.items[0];
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting video details:', error);
+      return null;
     }
-
-    const params = {
-      id: videoId,
-      part,
-      key: this.apiKey
-    };
-
-    const response = await this.request({
-      method: 'GET',
-      endpoint: 'videos',
-      params
-    });
-
-    return this.handleResponse(response);
   }
 }

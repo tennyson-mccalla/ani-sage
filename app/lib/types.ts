@@ -1,4 +1,4 @@
-import type { AnimeTitle } from './anime-api-adapter.js';
+import type { AnimeTitle } from './anime-api-adapter';
 
 export interface QuestionOptionMapping {
   dimension: string;

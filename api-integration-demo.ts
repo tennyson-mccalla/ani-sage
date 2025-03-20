@@ -1,192 +1,102 @@
 /**
- * API Integration Demo
+ * API Integration Test Demo
  * 
- * This script demonstrates how to use the TMDb API to fetch posters
- * and the YouTube API to fetch trailers for anime recommendations.
- * 
- * Simplified version for development, avoiding any API calls that might fail.
+ * This script demonstrates the API functionality of the Ani-Sage system.
+ * To run this script:
+ * 1. Make sure the application is running locally on port 3000
+ * 2. Execute with: ts-node api-integration-demo.ts
  */
 
-import { AnimeApiAdapter, ApiProvider } from './api/anime-api-adapter';
-import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
-// Load environment variables
-dotenv.config();
+const API_BASE = 'http://localhost:3000/api/v1';
 
-async function apiIntegrationDemo() {
-  console.log('=== API Integration Demo ===');
-  
-  // Create API adapter with environment variables
-  const apiAdapter = new AnimeApiAdapter({
-    tmdb: {
-      apiKey: process.env.TMDB_API_KEY || 'TMDB_API_KEY_MISSING'
-    },
-    youtube: {
-      apiKey: process.env.YOUTUBE_API_KEY || 'YOUTUBE_API_KEY_MISSING'
-    }
-  });
-  
+async function testApiEndpoints() {
+  console.log('=== Ani-Sage API Integration Test ===\n');
+
   try {
-    // Search for some popular anime using TMDb
-    console.log('\n=== TMDb Poster Demo ===');
-    console.log('\nSearching for popular anime from TMDb...');
-    const animeSearchResults = await apiAdapter.searchAnime('Demon Slayer', 3, ApiProvider.TMDB);
-    
-    console.log(`Found ${animeSearchResults.length} results from TMDb`);
-    
-    // Display the anime with their poster URLs
-    animeSearchResults.forEach((anime, index) => {
-      console.log(`\n${index + 1}. ${anime.title}`);
-      console.log(`   Medium poster: ${anime.image.medium || 'N/A'}`);
-      console.log(`   Large poster: ${anime.image.large || 'N/A'}`);
-      
-      // Log other useful details
-      console.log(`   Genres: ${anime.genres?.join(', ') || 'N/A'}`);
-      console.log(`   Score: ${anime.score}/10`);
-      if (anime.trailer) {
-        console.log(`   Trailer: ${anime.trailer}`);
+    // 1. Create a session
+    console.log('1. Creating a session...');
+    const sessionResponse = await fetch(`${API_BASE}/session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       }
     });
-  } catch (error) {
-    console.error('Error in TMDb demo:', error);
-  }
-  
-  try {
-    // YouTube Trailer Demo - just one example
-    console.log('\n=== YouTube Trailer Demo ===');
-    console.log('Fetching trailer for popular anime...');
-    
-    const animeTitle = 'Attack on Titan';
-    console.log(`\nSearching for trailer: ${animeTitle}`);
-    const trailerUrl = await apiAdapter.getAnimeTrailer(animeTitle);
-    console.log(`   Trailer URL: ${trailerUrl || 'Not found'}`);
-  } catch (error) {
-    console.error('Error in YouTube demo:', error);
-  }
-  
-  // Show how to use posters and trailers in recommendations
-  console.log('\n\nExample of using posters and trailers in recommendations:');
-  console.log(`
-  function renderRecommendation(anime) {
-    return \`
-      <div class="anime-card">
-        <div class="poster-container">
-          <img src="\${anime.image.medium}" alt="\${anime.title}" class="anime-poster">
-          \${anime.trailer ? \`
-            <div class="trailer-overlay">
-              <a href="\${anime.trailer}" class="play-button" aria-label="Watch trailer">
-                <svg viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </a>
-            </div>
-          \` : ''}
-        </div>
-        <div class="anime-info">
-          <h3>\${anime.title}</h3>
-          <p>\${anime.synopsis?.substring(0, 100)}...</p>
-          <div class="anime-meta">
-            <span class="score">\${anime.score}/10</span>
-            <span class="genres">\${anime.genres?.join(', ')}</span>
-          </div>
-        </div>
-      </div>
-    \`;
-  }
+    const sessionData = await sessionResponse.json();
+    console.log('Session created:', sessionData);
+    const sessionId = sessionData.sessionId;
 
-  // CSS for the component
-  const styles = \`
-    .anime-card {
-      display: flex;
-      flex-direction: column;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-      width: 260px;
-      margin: 1rem;
-      background: white;
+    // 2. Get some questions
+    console.log('\n2. Fetching questions...');
+    const questionsResponse = await fetch(`${API_BASE}/questions?sessionId=${sessionId}&count=3`);
+    const questionsData = await questionsResponse.json();
+    console.log(`Received ${questionsData.questions?.length || 0} questions`);
+    console.log('First question:', questionsData.questions?.[0]);
+
+    // 3. Answer a question
+    console.log('\n3. Answering questions to build profile...');
+    // For each question, pick the first option
+    for (const question of questionsData.questions || []) {
+      const firstOption = question.options[0];
+      console.log(`Answering question ${question.id} with option ${firstOption.id}`);
+
+      const answerResponse = await fetch(`${API_BASE}/answers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionId: question.id,
+          optionId: firstOption.id,
+          sessionId
+        })
+      });
+      const answerData = await answerResponse.json();
+      if (answerData.success) {
+        console.log(`Answer accepted. Updated profile dimensions:`, answerData.profile.dimensions);
+      } else {
+        console.log('Failed to submit answer:', answerData);
+      }
     }
-    
-    .anime-card:hover {
-      transform: translateY(-5px);
+
+    // 4. Get profile
+    console.log('\n4. Fetching user profile...');
+    const profileResponse = await fetch(`${API_BASE}/profile?sessionId=${sessionId}`);
+    const profileData = await profileResponse.json();
+    console.log('Profile:', profileData);
+
+    // 5. Get mock recommendations
+    console.log('\n5. Fetching recommendations with mock data...');
+    const recommendationsResponse = await fetch(`${API_BASE}/recommendations?sessionId=${sessionId}&useRealApi=false`);
+    const recommendationsData = await recommendationsResponse.json();
+    console.log(`Received ${recommendationsData.recommendations?.length || 0} recommendations`);
+    if (recommendationsData.recommendations?.length > 0) {
+      console.log('First recommendation:', {
+        title: recommendationsData.recommendations[0].title,
+        match: recommendationsData.recommendations[0].match,
+        reasons: recommendationsData.recommendations[0].reasons,
+      });
     }
-    
-    .poster-container {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 2/3;
-      overflow: hidden;
+
+    // 6. Get real API recommendations
+    console.log('\n6. Fetching recommendations with real API...');
+    const realRecommendationsResponse = await fetch(`${API_BASE}/recommendations?sessionId=${sessionId}&useRealApi=true`);
+    const realRecommendationsData = await realRecommendationsResponse.json();
+    console.log(`Received ${realRecommendationsData.recommendations?.length || 0} recommendations`);
+    if (realRecommendationsData.recommendations?.length > 0) {
+      console.log('First real API recommendation:', {
+        title: realRecommendationsData.recommendations[0].title,
+        match: realRecommendationsData.recommendations[0].match,
+        reasons: realRecommendationsData.recommendations[0].reasons,
+      });
     }
-    
-    .anime-poster {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .trailer-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.3);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    
-    .poster-container:hover .trailer-overlay {
-      opacity: 1;
-    }
-    
-    .play-button {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: rgba(255,0,0,0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: transform 0.2s;
-    }
-    
-    .play-button:hover {
-      transform: scale(1.1);
-    }
-    
-    .play-button svg {
-      width: 30px;
-      height: 30px;
-      fill: white;
-      margin-left: 5px;
-    }
-    
-    .anime-info {
-      padding: 1rem;
-    }
-    
-    .anime-meta {
-      display: flex;
-      margin-top: 0.5rem;
-      font-size: 0.8rem;
-      justify-content: space-between;
-    }
-    
-    .score {
-      color: #e50914;
-      font-weight: bold;
-    }
-  \`;
-  `);
-  
-  console.log('\nDemo completed!');
+
+    console.log('\nAPI Integration Test completed successfully!');
+  } catch (error) {
+    console.error('Error during API test:', error);
+  }
 }
 
-// Run the demo
-apiIntegrationDemo().catch(error => {
-  console.error('Demo error:', error);
-});
+// Run the test
+testApiEndpoints();

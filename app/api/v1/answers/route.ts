@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/api/db';
-import { questions } from '@/api/question-bank';
-import { corsHeaders } from '@/api/utils';
+import { db } from '@/app/lib/db';
+import { questions } from '@/app/lib/question-bank';
+import { corsHeaders } from '@/app/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    const { optionId, sessionId } = data;
-    const questionId = request.nextUrl.pathname.split('/').slice(-2)[0];
+    const { optionId, sessionId, questionId } = data;
 
     if (!sessionId || !optionId) {
       return NextResponse.json({

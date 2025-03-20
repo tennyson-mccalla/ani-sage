@@ -11,15 +11,31 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     },
     "allowJs": true,
     "resolveJsonModule": true,
-    "noEmit": false
+    "noEmit": false,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "incremental": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "api/**/*.ts",
-    "api/**/*.js"
+    "api/**/*.js",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

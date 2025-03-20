@@ -9,8 +9,8 @@
  * For local development, they can be set in a .env file.
  */
 
-import { AnimeApiAdapter, ApiProvider } from './anime-api-adapter.js';
-import { MCPAnimeIntegration } from './mcp-anime-integration.js';
+import { AnimeApiAdapter, ApiProvider } from '../app/lib/anime-api-adapter';
+import { MCPAnimeIntegration } from './mcp-anime-integration';
 
 /**
  * API configuration interface

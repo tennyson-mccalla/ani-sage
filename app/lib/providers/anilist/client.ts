@@ -1,4 +1,5 @@
-import { BaseAPIClient, APIResponse } from '.././core/client.js';
+import { BaseAPIClient, APIResponse } from '../../core/client';
+import axios from 'axios';
 
 // AniList Models
 export interface AnimeTitle {
@@ -10,6 +11,8 @@ export interface AnimeTitle {
 export interface AnimeCoverImage {
   medium?: string;
   large?: string;
+  extraLarge?: string;
+  color?: string;
 }
 
 export interface AnimeStartDate {
@@ -28,20 +31,35 @@ export interface AnimeStudioConnection {
 
 export interface AnimeDetails {
   id: number;
-  title: AnimeTitle;
-  coverImage?: AnimeCoverImage;
-  description?: string;
-  averageScore?: number;
-  popularity?: number;
-  genres?: string[];
-  format?: string;
-  episodes?: number;
-  duration?: number;
-  status?: string;
-  startDate?: AnimeStartDate;
-  studios?: AnimeStudioConnection;
-  season?: string;
-  seasonYear?: number;
+  title: {
+    romaji: string;
+    english: string | null;
+    native: string | null;
+  };
+  description: string;
+  genres: string[];
+  coverImage: {
+    medium: string;
+    large: string;
+    extraLarge?: string;
+    color?: string;
+  };
+  averageScore: number;
+  popularity: number;
+  episodes: number;
+  format: string;
+  status: string;
+  seasonYear: number;
+  season: string;
+  studios: {
+    nodes: Array<{ name: string }>;
+  };
+  source: string;
+  trailer: {
+    id: string;
+    site: string;
+  } | null;
+  idMal?: number; // MAL ID from AniList
 }
 
 export interface AnimeStatus {
@@ -76,6 +94,7 @@ export interface UserInfo {
  */
 export class AniListClient extends BaseAPIClient {
   private accessToken?: string;
+  private readonly endpoint = 'https://graphql.anilist.co';
 
   /**
    * Initialize the AniList client
@@ -163,6 +182,8 @@ export class AniListClient extends BaseAPIClient {
             coverImage {
               medium
               large
+              extraLarge
+              color
             }
             description
             averageScore
@@ -198,8 +219,8 @@ export class AniListClient extends BaseAPIClient {
       throw new Error('Anime ID is required');
     }
 
-    const gqlQuery = `
-      query ($id: Int!) {
+    const query = `
+      query ($id: Int) {
         Media(id: $id, type: ANIME) {
           id
           title {
@@ -207,45 +228,55 @@ export class AniListClient extends BaseAPIClient {
             english
             native
           }
+          description
+          genres
           coverImage {
             medium
             large
+            extraLarge
+            color
           }
-          description
           averageScore
           popularity
-          genres
-          format
           episodes
-          duration
+          format
           status
-          startDate {
-            year
-            month
-            day
-          }
+          seasonYear
+          season
           studios {
             nodes {
               name
             }
           }
-          season
-          seasonYear
+          source
+          trailer {
+            id
+            site
+          }
+          idMal
         }
       }
     `;
 
-    const response = await this.graphqlRequest(
-      gqlQuery,
-      { id: animeId }
-    );
+    try {
+      const response = await axios.post(this.endpoint, {
+        query,
+        variables: { id: animeId }
+      });
 
-    // Transform the data
-    if (response.data && response.data.data) {
-      response.data = response.data.data.Media;
+      return {
+        statusCode: response.status,
+        data: response.data?.data?.Media as AnimeDetails,
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error fetching anime details from AniList:', error);
+      return { 
+        statusCode: 500,
+        data: undefined,
+        headers: {} 
+      };
     }
-
-    return response as APIResponse<AnimeDetails>;
   }
 
   /**
@@ -274,6 +305,9 @@ export class AniListClient extends BaseAPIClient {
                 }
                 coverImage {
                   medium
+                  large
+                  extraLarge
+                  color
                 }
                 genres
                 averageScore
@@ -561,6 +595,8 @@ export class AniListClient extends BaseAPIClient {
             coverImage {
               large
               medium
+              extraLarge
+              color
             }
             description
             format
@@ -581,6 +617,7 @@ export class AniListClient extends BaseAPIClient {
             averageScore
             seasonYear
             season
+            idMal
           }
         }
       }
@@ -626,6 +663,8 @@ export class AniListClient extends BaseAPIClient {
             coverImage {
               large
               medium
+              extraLarge
+              color
             }
             description
             format
@@ -646,6 +685,7 @@ export class AniListClient extends BaseAPIClient {
             averageScore
             seasonYear
             season
+            idMal
           }
         }
       }
@@ -689,29 +729,14 @@ export class AniListClient extends BaseAPIClient {
                   english
                   native
                 }
-                coverImage {
-                  large
-                  medium
-                }
                 description
-                format
-                episodes
-                status
                 genres
-                studios {
-                  nodes {
-                    name
-                  }
+                coverImage {
+                  medium
+                  large
                 }
-                startDate {
-                  year
-                  month
-                  day
-                }
-                popularity
                 averageScore
-                seasonYear
-                season
+                popularity
               }
             }
           }
@@ -719,20 +744,26 @@ export class AniListClient extends BaseAPIClient {
       }
     `;
 
-    const response = await this.graphqlRequest(
-      query,
-      { id: animeId }
-    );
+    try {
+      const response = await axios.post(this.endpoint, {
+        query,
+        variables: { id: animeId }
+      });
 
-    // Transform the response
-    if (response.data?.data?.Media?.recommendations?.nodes) {
-      response.data = response.data.data.Media.recommendations.nodes.map(
-        (node: any) => node.mediaRecommendation
-      );
-    } else {
-      response.data = [];
+      return {
+        statusCode: response.status,
+        data: response.data?.data?.Media?.recommendations?.nodes?.map(
+          (node: any) => node.mediaRecommendation
+        ) as AnimeDetails[],
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error fetching anime recommendations from AniList:', error);
+      return { 
+        statusCode: 500,
+        data: [],
+        headers: {}
+      };
     }
-
-    return response as APIResponse<AnimeDetails[]>;
   }
 }

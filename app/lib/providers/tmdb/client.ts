@@ -4,7 +4,7 @@
  * Provides access to The Movie Database API for anime/TV show data
  */
 
-import { BaseAPIClient, APIResponse } from '.././core/client.js';
+import { BaseAPIClient, APIResponse } from '../../core/client';
 
 // TMDb Models
 export interface TMDbImage {
@@ -164,45 +164,165 @@ export class TMDbClient extends BaseAPIClient {
    *
    * @param query Search query
    * @param page Results page (default 1)
+   * @param isMovie Whether the anime is a movie or TV show
    * @returns TV search results filtered for likely anime content
    */
-  public async searchAnime(query: string, page: number = 1): Promise<APIResponse<SearchResult>> {
-    // First, do a general search
-    const response = await this.searchTV(`${query} anime`, page);
+  public async searchAnime(
+    query: string, 
+    page: number = 1, 
+    isMovie: boolean = false
+  ): Promise<APIResponse<SearchResult>> {
+    // Create multiple search variants to increase chances of finding the right match
+    const searchQueries = [
+      // Original title alone (lowest weight but sometimes needed)
+      query,
+      // Add "anime" qualifier (common strategy)
+      `${query} anime`,
+      // Add Japanese qualifier (helps for Japanese-only titles)
+      `${query} japanese`,
+      // Combined qualifiers for highest specificity
+      `${query} japanese ${isMovie ? 'movie' : 'series'}`
+    ];
+    
+    // For movies, include specific movie search
+    if (isMovie) {
+      // If it's a movie, try specifically searching for it as a movie
+      try {
+        const movieResponse = await this.request<SearchResult>({
+          method: 'GET',
+          endpoint: 'search/movie',
+          params: {
+            api_key: this.apiKey,
+            query: `${query} anime`,
+            language: this.language,
+            page: page.toString(),
+            include_adult: this.includeAdult.toString()
+          }
+        });
+        
+        if (movieResponse.data?.results && movieResponse.data.results.length > 0) {
+          // If we found movie results, try to map them to the TV search result format
+          const adaptedResults = movieResponse.data.results.map(movie => ({
+            id: movie.id,
+            name: movie.title,
+            original_name: movie.original_title,
+            overview: movie.overview,
+            poster_path: movie.poster_path,
+            backdrop_path: movie.backdrop_path,
+            first_air_date: movie.release_date,
+            genre_ids: movie.genre_ids,
+            origin_country: ['JP'], // Assume JP for anime movies
+            original_language: movie.original_language,
+            popularity: movie.popularity,
+            vote_average: movie.vote_average,
+            vote_count: movie.vote_count
+          }));
+          
+          return {
+            ...movieResponse,
+            data: {
+              ...movieResponse.data,
+              results: adaptedResults
+            }
+          };
+        }
+      } catch (error) {
+        console.warn(`Movie search failed for "${query}":`, error);
+        // Continue with TV search as fallback
+      }
+    }
+    
+    // Try each query variant until we find something promising
+    let bestResponse: APIResponse<SearchResult> | null = null;
+    let bestResults: TVSearchResult[] = [];
+    
+    for (const searchQuery of searchQueries) {
+      // Do a general search with this query variant
+      const response = await this.searchTV(searchQuery, page);
 
-    if (!response.data || !response.data.results) {
-      return response;
+      if (!response.data?.results || response.data.results.length === 0) {
+        continue; // Try next query if no results
+      }
+
+      // Filter results to likely anime
+      const animeResults = response.data.results.filter(show => {
+        // Check if show is from Japan
+        if (show.origin_country && show.origin_country.includes('JP')) {
+          return true;
+        }
+
+        // Check for anime-related terms in title or overview
+        const overview = show.overview?.toLowerCase() || '';
+        const name = show.name?.toLowerCase() || '';
+        const originalName = show.original_name?.toLowerCase() || '';
+        
+        // If the original name exactly matches our query, high chance it's right
+        if (originalName === query.toLowerCase() || name === query.toLowerCase()) {
+          return true;
+        }
+
+        const animeTerms = ['anime', 'manga', 'japanese animation'];
+        return animeTerms.some(term =>
+          overview.includes(term) || name.includes(term) || originalName.includes(term)
+        );
+      });
+
+      // Sort results to prioritize Japanese content and exact title matches
+      animeResults.sort((a, b) => {
+        // Priority 1: Japanese origin country
+        const aIsJapanese = a.origin_country?.includes('JP') || false;
+        const bIsJapanese = b.origin_country?.includes('JP') || false;
+        
+        if (aIsJapanese && !bIsJapanese) return -1;
+        if (!aIsJapanese && bIsJapanese) return 1;
+        
+        // Priority 2: Title match closeness
+        const aNameMatch = a.name.toLowerCase().includes(query.toLowerCase());
+        const bNameMatch = b.name.toLowerCase().includes(query.toLowerCase());
+        
+        if (aNameMatch && !bNameMatch) return -1;
+        if (!aNameMatch && bNameMatch) return 1;
+        
+        // Priority 3: Popularity (TMDB's default sort)
+        return b.popularity - a.popularity;
+      });
+      
+      // If we found results, keep track of the best ones
+      if (animeResults.length > 0) {
+        // If this query provided more results than previous ones, use it
+        if (animeResults.length > bestResults.length) {
+          bestResults = animeResults;
+          bestResponse = response;
+        }
+        
+        // If we got a perfect JP match with exactly matching title, stop searching
+        const perfectMatch = animeResults.find(show => 
+          show.origin_country?.includes('JP') && 
+          (show.name.toLowerCase() === query.toLowerCase() || 
+           show.original_name?.toLowerCase() === query.toLowerCase())
+        );
+        
+        if (perfectMatch) {
+          bestResults = [perfectMatch, ...animeResults.filter(r => r.id !== perfectMatch.id)];
+          bestResponse = response;
+          break; // Stop searching, we found an ideal match
+        }
+      }
     }
 
-    // Filter results to likely anime (this is an approximation since TMDb doesn't
-    // have a dedicated anime filter)
-    // We look for Japanese origin or specific keywords in the overview
-    const animeResults = response.data.results.filter(show => {
-      // Check if show is from Japan
-      if (show.origin_country.includes('JP')) {
-        return true;
-      }
+    // Return the best results we found, or empty if none
+    if (bestResponse) {
+      return {
+        ...bestResponse,
+        data: {
+          ...bestResponse.data!,
+          results: bestResults
+        }
+      };
+    }
 
-      // Check for anime-related terms in title or overview
-      const overview = show.overview.toLowerCase();
-      const name = show.name.toLowerCase();
-      const originalName = show.original_name.toLowerCase();
-
-      const animeTerms = ['anime', 'manga', 'japanese animation'];
-
-      return animeTerms.some(term =>
-        overview.includes(term) || name.includes(term) || originalName.includes(term)
-      );
-    });
-
-    // Return filtered results
-    return {
-      ...response,
-      data: {
-        ...response.data,
-        results: animeResults
-      }
-    };
+    // If all searches failed, return the original empty response
+    return await this.searchTV(query, page);
   }
 
   /**

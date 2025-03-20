@@ -5,8 +5,8 @@
  * and YouTube to fetch anime data and map it to psychological dimensions.
  */
 
-import { AnimeApiAdapter, ApiProvider, AnimeTitle } from './anime-api-adapter.js';
-import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from './anime-attribute-mapper.js';
+import { AnimeApiAdapter, ApiProvider, AnimeTitle } from '../app/lib/anime-api-adapter';
+import { mapAnimeToDimensions, calculateMatchScore, getMatchExplanations } from '../app/lib/anime-attribute-mapper';
 import { fileURLToPath } from 'url';
 
 /**

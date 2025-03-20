@@ -1,14 +1,11 @@
-import { AnimeApiAdapter } from '../anime-api-adapter.js';
-import { createApiAdapter } from '../index.js';
-import { questions } from '../question-bank.js';
-import { db, initDatabase } from '../db.js';
-import { Question, QuestionOption, Profile, Session } from '../types.js';
+import { AnimeApiAdapter } from '../../app/lib/anime-api-adapter';
+import { createApiAdapter } from '../index';
+import { questions } from '../../app/lib/question-bank';
+import { db } from '../../app/lib/db';
+import { Question, QuestionOption, Profile, Session } from '../../app/lib/types';
 
 // Initialize API adapter with configuration
 const apiAdapter = createApiAdapter();
-
-// Initialize database
-initDatabase().catch(console.error);
 
 // Helper function to handle CORS
 function corsHeaders() {

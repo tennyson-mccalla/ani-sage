@@ -6,11 +6,11 @@
  * work with different data sources.
  */
 
-import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/anilist/client.js';
-import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client.js';
-import { YouTubeClient } from './providers/youtube/client.js';
-import { TMDbClient, TVDetails as TMDbTVDetails } from './providers/tmdb/client.js';
-import { BaseAPIClient } from './core/client.js';
+import { AniListClient, AnimeDetails as AniListAnimeDetails } from './providers/anilist/client';
+import { MALClient, AnimeDetails as MALAnimeDetails } from './providers/mal/client';
+import { YouTubeClient } from './providers/youtube/client';
+import { TMDbClient, TVDetails as TMDbTVDetails } from './providers/tmdb/client';
+import { BaseAPIClient } from './core/client';
 
 // Unified anime model that works across different providers
 export interface AnimeTitle {
@@ -25,6 +25,8 @@ export interface AnimeTitle {
   image?: {
     medium?: string;
     large?: string;
+    extraLarge?: string;
+    color?: string;
   };
   synopsis?: string;
   episodeCount?: number;
@@ -106,6 +108,26 @@ export interface AnimeApiAdapter {
   getCurrentSeason(): string;
   extractYouTubeId(url: string): string | null;
   getAnimeTrailer(title: string): Promise<string | null>;
+}
+
+/**
+ * Create an API adapter with environmental configuration
+ */
+export function createApiAdapter(): AnimeApiAdapter {
+  const config: ApiConfig = {
+    anilist: {},
+    mal: {
+      clientId: process.env.MAL_CLIENT_ID || '',
+    },
+    tmdb: {
+      apiKey: process.env.TMDB_API_KEY || '',
+    },
+    youtube: {
+      apiKey: process.env.YOUTUBE_API_KEY || '',
+    }
+  };
+  
+  return new AnimeApiAdapter(config, ApiProvider.ANILIST);
 }
 
 export class AniListAdapter implements AnimeApiAdapter {
@@ -359,7 +381,9 @@ export class AniListAdapter implements AnimeApiAdapter {
       genres: anime.genres,
       image: {
         medium: anime.coverImage?.medium,
-        large: anime.coverImage?.large
+        large: anime.coverImage?.large,
+        extraLarge: anime.coverImage?.extraLarge,
+        color: anime.coverImage?.color
       }
     };
   }
@@ -374,13 +398,13 @@ export class AniListAdapter implements AnimeApiAdapter {
       title: anime.title,
       alternativeTitles,
       image: {
-        medium: anime.image_url || '',
-        large: anime.image_url || ''
+        medium: anime.main_picture?.medium || '',
+        large: anime.main_picture?.large || ''
       },
       synopsis: anime.synopsis,
       score: anime.mean,
       genres: anime.genres?.map(g => g.name) || [],
-      popularity: anime.rank
+      popularity: anime.popularity
     };
   }
 
@@ -518,14 +542,22 @@ export class AnimeApiAdapter {
     // Get the primary title (prefer English, then Romaji, then Native)
     const primaryTitle = anime.title.english || anime.title.romaji || anime.title.native || '';
 
+    // Create external IDs object if MAL ID is available
+    const externalIds = {} as Record<string, any>;
+    
+    if (anime.idMal) {
+      externalIds.mal = anime.idMal;
+    }
+    
     return {
       id: anime.id.toString(),
       title: primaryTitle,
       description: anime.description,
       genres: anime.genres,
-      imageUrl: anime.coverImage?.medium,
+      imageUrl: anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium,
       score: anime.averageScore,
-      popularity: anime.popularity
+      popularity: anime.popularity,
+      externalIds: Object.keys(externalIds).length > 0 ? externalIds : undefined
     };
   }
 
@@ -545,13 +577,13 @@ export class AnimeApiAdapter {
       title: anime.title,
       alternativeTitles,
       image: {
-        medium: anime.image_url || '',
-        large: anime.image_url || ''
+        medium: anime.main_picture?.medium || '',
+        large: anime.main_picture?.large || ''
       },
       synopsis: anime.synopsis,
       score: anime.mean,
       genres: anime.genres?.map(g => g.name) || [],
-      popularity: anime.rank
+      popularity: anime.popularity
     };
   }
 
@@ -582,7 +614,12 @@ export class AnimeApiAdapter {
       description: show.overview,
       genres: show.genres?.map(g => g.name) || [],
       imageUrl: show.poster_path ?
-        `https://image.tmdb.org/t/p/w300${show.poster_path}` : undefined,
+        `https://image.tmdb.org/t/p/w780${show.poster_path}` : undefined,
+      image: {
+        medium: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+        large: show.poster_path ? `https://image.tmdb.org/t/p/w780${show.poster_path}` : undefined,
+        extraLarge: show.poster_path ? `https://image.tmdb.org/t/p/original${show.poster_path}` : undefined,
+      },
       score: show.vote_average,
       popularity: show.popularity
     };

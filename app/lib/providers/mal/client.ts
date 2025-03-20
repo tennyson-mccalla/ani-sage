@@ -1,4 +1,5 @@
-import { BaseAPIClient, APIResponse } from '.././core/client.js';
+import { BaseAPIClient, APIResponse } from '../../core/client';
+import axios from 'axios';
 
 // MAL Models
 export interface AlternativeTitles {
@@ -41,23 +42,28 @@ export interface UserInfo {
 export interface AnimeDetails {
   id: number;
   title: string;
-  main_picture?: MainPicture;
-  alternative_titles?: AlternativeTitles;
+  main_picture: {
+    medium: string;
+    large: string;
+  };
+  alternative_titles: {
+    synonyms: string[];
+    en: string;
+    ja: string;
+  };
   synopsis: string;
   mean: number;
-  rank?: number;
-  genres?: Genre[];
-  media_type?: string;
-  status?: string;
-  num_episodes?: number;
-  start_season?: Record<string, any>;
-  broadcast?: Record<string, any>;
-  source?: string;
-  average_episode_duration?: number;
-  rating?: string;
-  studios?: Array<Record<string, any>>;
-  statistics?: Record<string, any>;
-  image_url?: string;
+  popularity: number;
+  num_episodes: number;
+  media_type: string;
+  status: string;
+  start_season: {
+    year: number;
+    season: string;
+  };
+  studios: Array<{ id: number; name: string }>;
+  source: string;
+  genres: Array<{ id: number; name: string }>;
 }
 
 export interface AnimeStatus {
@@ -74,7 +80,8 @@ export interface AnimeStatus {
  * Provides access to the MyAnimeList API v2 for anime data
  */
 export class MALClient extends BaseAPIClient {
-  private clientId: string;
+  private readonly apiBaseUrl = 'https://api.myanimelist.net/v2';
+  private readonly clientId: string;
   private clientSecret?: string;
   private accessToken?: string;
 
@@ -102,12 +109,7 @@ export class MALClient extends BaseAPIClient {
     this.accessToken = accessToken;
   }
 
-  /**
-   * Get headers with authentication
-   *
-   * @returns Headers object with authentication
-   */
-  private getHeaders(): Record<string, string> {
+  private get headers() {
     const headers: Record<string, string> = {
       'X-MAL-CLIENT-ID': this.clientId
     };
@@ -138,33 +140,35 @@ export class MALClient extends BaseAPIClient {
 
     const fieldList = fields || [
       'id', 'title', 'main_picture', 'alternative_titles',
-      'synopsis', 'mean', 'rank', 'genres'
+      'synopsis', 'mean', 'popularity', 'num_episodes',
+      'media_type', 'status', 'genres'
     ];
 
-    const params: Record<string, any> = {
+    const params: Record<string, string> = {
       q: query,
-      limit: Math.min(limit, 100),
+      limit: String(Math.min(limit, 100)),
       fields: fieldList.join(',')
     };
 
-    const response = await this.request<{ data: Array<{ node: AnimeDetails }> }>({
-      method: 'GET',
-      endpoint: 'anime',
-      params,
-      headers: this.getHeaders()
-    });
+    try {
+      const response = await axios.get(
+        `${this.apiBaseUrl}/anime?${new URLSearchParams(params)}`,
+        { headers: this.headers }
+      );
 
-    // Transform the response to extract just the anime details
-    let animeList: AnimeDetails[] = [];
-    if (response.data && response.data.data) {
-      animeList = response.data.data.map(item => item.node);
+      return {
+        statusCode: response.status,
+        data: response.data.data.map((item: any) => item.node) as AnimeDetails[],
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error searching anime on MAL:', error);
+      return { 
+        statusCode: 500, 
+        data: [], 
+        headers: {} 
+      };
     }
-
-    // Create a new response with the correct type
-    return {
-      ...response,
-      data: animeList
-    };
   }
 
   /**
@@ -178,22 +182,34 @@ export class MALClient extends BaseAPIClient {
       throw new Error('Anime ID is required');
     }
 
-    const params = {
+    const params: Record<string, string> = {
       fields: [
         'id', 'title', 'main_picture', 'alternative_titles',
-        'synopsis', 'mean', 'rank', 'genres', 'media_type',
-        'status', 'num_episodes', 'start_season', 'broadcast',
-        'source', 'average_episode_duration', 'rating',
-        'studios', 'statistics'
+        'synopsis', 'mean', 'popularity', 'num_episodes',
+        'media_type', 'status', 'start_season', 'studios',
+        'source', 'genres'
       ].join(',')
     };
 
-    return this.request<AnimeDetails>({
-      method: 'GET',
-      endpoint: `anime/${animeId}`,
-      params,
-      headers: this.getHeaders()
-    });
+    try {
+      const response = await axios.get(
+        `${this.apiBaseUrl}/anime/${animeId}?${new URLSearchParams(params)}`,
+        { headers: this.headers }
+      );
+
+      return {
+        statusCode: response.status,
+        data: response.data as AnimeDetails,
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error fetching anime details from MAL:', error);
+      return { 
+        statusCode: 500, 
+        data: undefined, 
+        headers: {} 
+      };
+    }
   }
 
   /**
@@ -227,7 +243,7 @@ export class MALClient extends BaseAPIClient {
       method: 'GET',
       endpoint: `users/${username}`,
       params,
-      headers: this.getHeaders()
+      headers: this.headers
     });
   }
 
@@ -267,7 +283,7 @@ export class MALClient extends BaseAPIClient {
       method: 'GET',
       endpoint: `users/${username}/animelist`,
       params,
-      headers: this.getHeaders()
+      headers: this.headers
     });
   }
 
@@ -301,7 +317,7 @@ export class MALClient extends BaseAPIClient {
       method: 'PATCH',
       endpoint: `anime/${animeId}/my_list_status`,
       data,
-      headers: this.getHeaders()
+      headers: this.headers
     });
   }
 
@@ -322,31 +338,32 @@ export class MALClient extends BaseAPIClient {
     limit: number = 100,
     offset: number = 0
   ): Promise<APIResponse<AnimeDetails[]>> {
-    const params = {
+    const params: Record<string, string> = {
       sort,
-      limit: Math.min(limit, 500),
-      offset,
-      fields: 'id,title,main_picture,synopsis,mean,rank,popularity,genres'
+      limit: String(Math.min(limit, 500)),
+      offset: String(offset),
+      fields: 'id,title,main_picture,synopsis,mean,popularity,num_episodes,media_type,status,genres'
     };
 
-    const response = await this.request<{ data: Array<{ node: AnimeDetails }> }>({
-      method: 'GET',
-      endpoint: `anime/season/${year}/${season}`,
-      params,
-      headers: this.getHeaders()
-    });
+    try {
+      const response = await axios.get(
+        `${this.apiBaseUrl}/anime/season/${year}/${season.toLowerCase()}?${new URLSearchParams(params)}`,
+        { headers: this.headers }
+      );
 
-    // Transform the response to extract just the anime details
-    let animeList: AnimeDetails[] = [];
-    if (response.data && response.data.data) {
-      animeList = response.data.data.map(item => item.node);
+      return {
+        statusCode: response.status,
+        data: response.data.data.map((item: any) => item.node) as AnimeDetails[],
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error getting seasonal anime from MAL:', error);
+      return { 
+        statusCode: 500, 
+        data: [], 
+        headers: {} 
+      };
     }
-
-    // Create a new response with the correct type
-    return {
-      ...response,
-      data: animeList
-    };
   }
 
   /**
@@ -368,20 +385,34 @@ export class MALClient extends BaseAPIClient {
 
     const fieldList = fields || [
       'id', 'title', 'main_picture', 'synopsis',
-      'mean', 'rank', 'popularity', 'genres'
+      'mean', 'popularity', 'num_episodes', 'media_type',
+      'status', 'genres'
     ];
 
-    const params = {
-      limit: Math.min(limit, 100),
-      offset,
+    const params: Record<string, string> = {
+      limit: String(Math.min(limit, 100)),
+      offset: String(offset),
       fields: fieldList.join(',')
     };
 
-    return this.request({
-      method: 'GET',
-      endpoint: 'anime/suggestions',
-      params,
-      headers: this.getHeaders()
-    });
+    try {
+      const response = await axios.get(
+        `${this.apiBaseUrl}/anime/suggestions?${new URLSearchParams(params)}`,
+        { headers: this.headers }
+      );
+
+      return {
+        statusCode: response.status,
+        data: response.data.data.map((item: any) => item.node) as AnimeDetails[],
+        headers: response.headers as Record<string, string>
+      };
+    } catch (error) {
+      console.error('Error getting anime suggestions from MAL:', error);
+      return { 
+        statusCode: 500, 
+        data: [], 
+        headers: {} 
+      };
+    }
   }
 }
