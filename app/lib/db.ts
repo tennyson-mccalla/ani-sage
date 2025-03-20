@@ -84,6 +84,9 @@ export function dumpStorage(): string {
 
 // In-memory implementation for local development
 export class InMemoryDatabase implements Database {
+  // Add public sessions and profiles maps for direct access
+  public sessions: Map<string, Session> = new Map();
+  public profiles: Map<string, Profile> = new Map();
   // These methods are now public to allow direct access for debugging and session creation
   getProfiles(): string | null {
     return LocalStorage.getItem('profiles');
@@ -116,34 +119,36 @@ export class InMemoryDatabase implements Database {
   }
   
   // Private helper methods for internal use
-  private _getProfilesMap(): Map<string, Profile> {
-    const storedData = this.getProfiles();
-    if (!storedData) {
-      return new Map();
+  _getProfilesMap(): Map<string, Profile> {
+    // First, try to load from local storage into our class instance map
+    if (this.profiles.size === 0) {
+      const storedData = this.getProfiles();
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          this.profiles = new Map(parsed);
+        } catch (error) {
+          console.error('Error parsing profiles from storage:', error);
+        }
+      }
     }
-    
-    try {
-      const parsed = JSON.parse(storedData);
-      return new Map(parsed);
-    } catch (error) {
-      console.error('Error parsing profiles from storage:', error);
-      return new Map();
-    }
+    return this.profiles;
   }
   
-  private _getSessionsMap(): Map<string, Session> {
-    const storedData = this.getSessions();
-    if (!storedData) {
-      return new Map();
+  _getSessionsMap(): Map<string, Session> {
+    // First, try to load from local storage into our class instance map
+    if (this.sessions.size === 0) {
+      const storedData = this.getSessions();
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          this.sessions = new Map(parsed);
+        } catch (error) {
+          console.error('Error parsing sessions from storage:', error);
+        }
+      }
     }
-    
-    try {
-      const parsed = JSON.parse(storedData);
-      return new Map(parsed);
-    } catch (error) {
-      console.error('Error parsing sessions from storage:', error);
-      return new Map();
-    }
+    return this.sessions;
   }
 
   async createProfile(profile: Omit<Profile, 'id'>): Promise<Profile> {
