@@ -202,14 +202,15 @@ export class TMDbClient extends BaseAPIClient {
         
         if (movieResponse.data?.results && movieResponse.data.results.length > 0) {
           // If we found movie results, try to map them to the TV search result format
-          const adaptedResults = movieResponse.data.results.map(movie => ({
+          // Need to add type annotation as TSC doesn't know the movie object structure
+          const adaptedResults = movieResponse.data.results.map((movie: any) => ({
             id: movie.id,
-            name: movie.title,
-            original_name: movie.original_title,
+            name: movie.title, // Movie has 'title' instead of 'name'
+            original_name: movie.original_title, // Movie has 'original_title' instead of 'original_name'
             overview: movie.overview,
             poster_path: movie.poster_path,
             backdrop_path: movie.backdrop_path,
-            first_air_date: movie.release_date,
+            first_air_date: movie.release_date, // Movie has 'release_date' instead of 'first_air_date'
             genre_ids: movie.genre_ids,
             origin_country: ['JP'], // Assume JP for anime movies
             original_language: movie.original_language,
