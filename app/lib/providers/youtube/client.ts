@@ -189,7 +189,7 @@ export class YouTubeClient extends BaseAPIClient {
   
         if (response.data.items && response.data.items.length > 0) {
           // Look for official trailers first
-          const officialTrailer = response.data.items.find(item => 
+          const officialTrailer = response.data.items.find((item: any) => 
             (item.snippet.title.toLowerCase().includes('official') && 
              item.snippet.title.toLowerCase().includes('trailer')) ||
             (item.snippet.channelTitle.toLowerCase().includes('official') ||
