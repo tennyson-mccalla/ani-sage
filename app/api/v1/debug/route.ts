@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 import { corsHeaders } from '@/app/lib/utils';
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   console.log("GET /api/v1/debug called");
   
   try {
@@ -28,7 +28,7 @@ export async function GET() {
       if (rawStorage.sessions) {
         try {
           const parsedSessions = JSON.parse(rawStorage.sessions);
-          sessions = parsedSessions.map(([id, session]) => ({
+          sessions = parsedSessions.map(([id, session]: [string, any]) => ({
             id,
             profileId: session.profileId,
             createdAt: session.createdAt,
@@ -42,7 +42,7 @@ export async function GET() {
       if (rawStorage.profiles) {
         try {
           const parsedProfiles = JSON.parse(rawStorage.profiles);
-          profiles = parsedProfiles.map(([id, profile]) => ({
+          profiles = parsedProfiles.map(([id, profile]: [string, any]) => ({
             id,
             dimensions: Object.keys(profile.dimensions || {}).length,
             answeredQuestions: profile.answeredQuestions?.length || 0,
