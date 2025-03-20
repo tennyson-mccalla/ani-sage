@@ -135,7 +135,7 @@ export default function QuestionsPage() {
     if (process.env.NEXT_PUBLIC_USE_REAL_API === 'true' && sessionId) {
       try {
         console.log(`Submitting answer: ${currentQuestion.id} = ${optionId}`);
-        const response = await fetch(`/api/v1/answers`, {
+        const response = await fetch(`/api/answers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
