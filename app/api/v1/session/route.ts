@@ -3,7 +3,7 @@ import { db } from '@/app/lib/db';
 import { corsHeaders } from '@/app/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   console.log("GET /api/v1/session called");
   return NextResponse.json({
     message: "Session endpoint is available",
@@ -11,7 +11,7 @@ export async function GET() {
   }, { headers: corsHeaders() });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   console.log("POST /api/v1/session called");
   try {
     // Generate a unique session ID
@@ -22,11 +22,13 @@ export async function POST(request: NextRequest) {
     const profileId = uuidv4();
     console.log("Generated profile ID:", profileId);
     
-    // Create empty profile
+    // Create empty profile with required date fields
     const profile = await db.createProfile({
       dimensions: {},
       confidences: {},
-      answeredQuestions: []
+      answeredQuestions: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     console.log("Created profile with ID:", profile.id);
     
