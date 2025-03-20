@@ -82,7 +82,10 @@ export default function QuestionsPage() {
           setIsLoading(true);
           console.log('Fetching questions for session:', sessionId);
           
-          const response = await fetch(`/api/v1/questions?sessionId=${sessionId}&count=10`);
+          // Try the direct API path first and fall back to v1 path if needed
+          const apiUrl = `/api/questions?sessionId=${sessionId}&count=10`;
+          console.log('Fetching questions from:', apiUrl);
+          const response = await fetch(apiUrl);
           
           if (!response.ok) {
             console.error('Failed to fetch questions:', response.status);
