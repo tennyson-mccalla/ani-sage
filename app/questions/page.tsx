@@ -159,7 +159,7 @@ export default function QuestionsPage() {
     // If this is the last question, update the profile with all answers and redirect
     if (currentQuestionIndex >= questions.length - 1) {
       try {
-        await updateProfile(updatedAnswers, sessionId);
+        await updateProfile(updatedAnswers);
         router.push('/recommendations');
       } catch (err) {
         console.error('Error updating profile:', err);
