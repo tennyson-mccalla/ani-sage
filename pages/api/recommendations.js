@@ -19,8 +19,8 @@ export default function handler(req, res) {
     {
       id: '1',
       title: 'Fullmetal Alchemist: Brotherhood',
-      // Use TMDb image with correct domain
-      image: 'https://image.tmdb.org/t/p/original/2UrsInMjr35gfAJXHdcj2vLIrWg.jpg',
+      // Use working TMDb image with correct path
+      image: 'https://image.tmdb.org/t/p/original/dzSALlMy3Mss6kPMjvf4Sl4pAtR.jpg',
       genres: ['Action', 'Adventure', 'Drama', 'Fantasy'],
       score: 9.1,
       synopsis: 'Two brothers search for a Philosopher\'s Stone after an attempt to revive their deceased mother goes wrong, changing their bodies.',
