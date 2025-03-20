@@ -646,8 +646,8 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
   try {
     // Calculate match scores based on profile dimensions
     const scoredAnime = animeDatabase.map(anime => {
-      // If profile has no dimensions, use a random score
-      if (!profile.dimensions || Object.keys(profile.dimensions).length === 0) {
+      // If profile is null or has no dimensions, use a random score
+      if (!profile || !profile.dimensions || Object.keys(profile.dimensions).length === 0) {
         return {
           ...anime,
           matchScore: Math.floor(70 + Math.random() * 30)
