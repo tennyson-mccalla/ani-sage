@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 import { corsHeaders } from '@/app/lib/utils';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     console.log("GET /api/v1/profile called");
     const sessionId = request.nextUrl.searchParams.get('sessionId');
@@ -39,8 +39,12 @@ export async function GET(request: NextRequest) {
           updatedAt: new Date()
         };
         
-        // Store directly
-        inMemoryDb.sessions.set(sessionId, mockSession);
+        // We need to use the db interface instead of directly accessing inMemoryDb
+        await db.createSession({
+          profileId: mockProfileId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
         
         // Create a mock profile
         const mockProfile = {
@@ -58,7 +62,7 @@ export async function GET(request: NextRequest) {
           updatedAt: new Date()
         };
         
-        inMemoryDb.profiles.set(mockProfileId, mockProfile);
+        await db.createProfile(mockProfile);
         
         // Convert dimensions for response
         const dimensionsArray = Object.entries(mockProfile.dimensions).map(([name, value]) => ({
@@ -142,7 +146,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const sessionId = request.nextUrl.searchParams.get('sessionId');
     const data = await request.json();
