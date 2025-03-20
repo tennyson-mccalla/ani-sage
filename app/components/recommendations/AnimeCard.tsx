@@ -25,7 +25,7 @@ export interface AnimeRecommendation {
   match: number;
   reasons: string[];
   trailer?: string;
-  tmdbImage?: string;
+  malImage?: string;
 }
 
 interface AnimeCardProps {
@@ -114,9 +114,14 @@ export default function AnimeCard({ anime, index }: AnimeCardProps) {
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => {
             e.currentTarget.onerror = null;
-            // Try to use TMDb image if available, otherwise fall back to colored placeholder
-            if (anime.tmdbImage) {
-              e.currentTarget.src = anime.tmdbImage;
+            // Try to use MAL image if available, otherwise fall back to colored placeholder
+            if (anime.malImage) {
+              e.currentTarget.src = anime.malImage;
+              // Add a second error handler in case the MAL image also fails
+              e.currentTarget.onerror = (e2) => {
+                (e2.target as HTMLImageElement).onerror = null;
+                (e2.target as HTMLImageElement).src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+              };
             } else {
               e.currentTarget.src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
             }

@@ -19,8 +19,8 @@ export default function handler(req, res) {
     {
       id: '1',
       title: 'Fullmetal Alchemist: Brotherhood',
-      // Use large, high-resolution image from MyAnimeList
-      image: 'https://cdn.myanimelist.net/images/anime/1223/96541l.jpg',
+      // Prioritize TMDb high-quality image
+      image: 'https://image.tmdb.org/t/p/original/2UrsInMjr35gfAJXHdcj2vLIrWg.jpg',
       genres: ['Action', 'Adventure', 'Drama', 'Fantasy'],
       score: 9.1,
       synopsis: 'Two brothers search for a Philosopher\'s Stone after an attempt to revive their deceased mother goes wrong, changing their bodies.',
@@ -31,14 +31,20 @@ export default function handler(req, res) {
         'The character growth elements you value'
       ],
       trailer: 'https://www.youtube.com/watch?v=--IcmZkvL0Q',
-      // Add TMDb image as fallback
-      tmdbImage: 'https://image.tmdb.org/t/p/original/2UrsInMjr35gfAJXHdcj2vLIrWg.jpg'
+      // Keep MAL image as fallback
+      malImage: 'https://cdn.myanimelist.net/images/anime/1223/96541l.jpg',
+      // Include mapping metadata
+      externalIds: {
+        mal: 5114,
+        tmdb: 31911,
+        anilist: 5114
+      }
     },
     {
       id: '2',
       title: 'Steins;Gate',
-      // Use large, high-resolution image from MyAnimeList
-      image: 'https://cdn.myanimelist.net/images/anime/5/73199l.jpg',
+      // Prioritize TMDb high-quality image
+      image: 'https://image.tmdb.org/t/p/original/6iysgZr6Upm5RlAlVFo5f4D9euu.jpg',
       genres: ['Sci-Fi', 'Thriller', 'Drama'],
       score: 9.0,
       synopsis: 'A group of friends accidentally create a time machine, leading to dramatic consequences as they attempt to prevent global disaster.',
@@ -49,14 +55,20 @@ export default function handler(req, res) {
         'The character dynamics you connect with'
       ],
       trailer: 'https://www.youtube.com/watch?v=27OZc-ku6is',
-      // Add TMDb image as fallback
-      tmdbImage: 'https://image.tmdb.org/t/p/original/6iysgZr6Upm5RlAlVFo5f4D9euu.jpg'
+      // Keep MAL image as fallback
+      malImage: 'https://cdn.myanimelist.net/images/anime/5/73199l.jpg',
+      // Include mapping metadata
+      externalIds: {
+        mal: 9253,
+        tmdb: 42509,
+        anilist: 9253
+      }
     },
     {
       id: '3',
       title: 'Violet Evergarden',
-      // Use large, high-resolution image from MyAnimeList
-      image: 'https://cdn.myanimelist.net/images/anime/1795/95088l.jpg', 
+      // Prioritize TMDb high-quality image
+      image: 'https://image.tmdb.org/t/p/original/ImvHbM4GsJJykarnOzhtpG6ax6.jpg',
       genres: ['Drama', 'Fantasy', 'Slice of Life'],
       score: 8.9,
       synopsis: 'A former soldier becomes a letter writer and explores the meaning of love as she recovers from the war.',
@@ -67,14 +79,20 @@ export default function handler(req, res) {
         'The character-driven narrative you enjoy'
       ],
       trailer: 'https://www.youtube.com/watch?v=0CJeDetA45Q',
-      // Add TMDb image as fallback
-      tmdbImage: 'https://image.tmdb.org/t/p/original/ImvHbM4GsJJykarnOzhtpG6ax6.jpg'
+      // Keep MAL image as fallback
+      malImage: 'https://cdn.myanimelist.net/images/anime/1795/95088l.jpg',
+      // Include mapping metadata
+      externalIds: {
+        mal: 33352,
+        tmdb: 75154,
+        anilist: 98426
+      }
     },
     {
       id: '4',
       title: 'Attack on Titan',
-      // Use large, high-resolution image from MyAnimeList
-      image: 'https://cdn.myanimelist.net/images/anime/10/47347l.jpg',
+      // Prioritize TMDb high-quality image
+      image: 'https://image.tmdb.org/t/p/original/hTP1DtLGFamjfsWH5QfwQF2xJHz.jpg',
       genres: ['Action', 'Drama', 'Fantasy', 'Mystery'],
       score: 8.5,
       synopsis: 'In a world where humanity lives within cities surrounded by enormous walls due to the Titans, gigantic humanoid creatures who devour humans seemingly without reason.',
@@ -85,14 +103,20 @@ export default function handler(req, res) {
         'The mystery elements keep you engaged'
       ],
       trailer: 'https://www.youtube.com/watch?v=MGRm4IzK1SQ',
-      // Add TMDb image as fallback
-      tmdbImage: 'https://image.tmdb.org/t/p/original/hTP1DtLGFamjfsWH5QfwQF2xJHz.jpg'
+      // Keep MAL image as fallback
+      malImage: 'https://cdn.myanimelist.net/images/anime/10/47347l.jpg',
+      // Include mapping metadata
+      externalIds: {
+        mal: 16498,
+        tmdb: 1429,
+        anilist: 16498
+      }
     },
     {
       id: '5',
       title: 'Your Name',
-      // Use large, high-resolution image from MyAnimeList
-      image: 'https://cdn.myanimelist.net/images/anime/5/87048l.jpg',
+      // Prioritize TMDb high-quality image
+      image: 'https://image.tmdb.org/t/p/original/mMtUybQ6hL24FXo0F3Z4j2KG7kZ.jpg',
       genres: ['Romance', 'Supernatural', 'Drama'],
       score: 9.0,
       synopsis: 'Two strangers find themselves linked in a bizarre way. When a connection forms, will distance be the only thing to keep them apart?',
@@ -103,8 +127,14 @@ export default function handler(req, res) {
         'The supernatural elements add intrigue'
       ],
       trailer: 'https://www.youtube.com/watch?v=xU47nhruN-Q',
-      // Add TMDb image as fallback
-      tmdbImage: 'https://image.tmdb.org/t/p/original/mMtUybQ6hL24FXo0F3Z4j2KG7kZ.jpg'
+      // Keep MAL image as fallback
+      malImage: 'https://cdn.myanimelist.net/images/anime/5/87048l.jpg',
+      // Include mapping metadata
+      externalIds: {
+        mal: 32281,
+        tmdb: 372058,
+        anilist: 21519
+      }
     }
   ];
   
