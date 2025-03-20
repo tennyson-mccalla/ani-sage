@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { corsHeaders } from '@/app/lib/utils';
 import { db } from '@/app/lib/db';
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   console.log("GET /api/v1 health check called");
   
   // Get session count for debugging
   const inMemoryDb = db as any;
-  const sessionEntries = Array.from(inMemoryDb.sessions.entries());
-  const profileEntries = Array.from(inMemoryDb.profiles.entries());
+  // Explicitly type the entries as [string, any][] for TypeScript compatibility
+  const sessionEntries = Array.from(inMemoryDb.sessions.entries()) as [string, any][];
+  const profileEntries = Array.from(inMemoryDb.profiles.entries()) as [string, any][];
   
   console.log("Current sessions:", JSON.stringify(sessionEntries));
   console.log("Current profiles:", JSON.stringify(profileEntries));
