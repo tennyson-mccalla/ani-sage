@@ -19,8 +19,8 @@ export default function handler(req, res) {
     {
       id: '1',
       title: 'Fullmetal Alchemist: Brotherhood',
-      // Prioritize TMDb high-quality image - corrected URL
-      image: 'https://media.themoviedb.org/t/p/original/2UrsInMjr35gfAJXHdcj2vLIrWg.jpg',
+      // Use TMDb image with correct domain
+      image: 'https://image.tmdb.org/t/p/original/2UrsInMjr35gfAJXHdcj2vLIrWg.jpg',
       genres: ['Action', 'Adventure', 'Drama', 'Fantasy'],
       score: 9.1,
       synopsis: 'Two brothers search for a Philosopher\'s Stone after an attempt to revive their deceased mother goes wrong, changing their bodies.',
@@ -43,8 +43,8 @@ export default function handler(req, res) {
     {
       id: '2',
       title: 'Steins;Gate',
-      // Prioritize TMDb high-quality image - corrected URL
-      image: 'https://media.themoviedb.org/t/p/original/6iysgZr6Upm5RlAlVFo5f4D9euu.jpg',
+      // Use TMDb image with correct domain
+      image: 'https://image.tmdb.org/t/p/original/6iysgZr6Upm5RlAlVFo5f4D9euu.jpg',
       genres: ['Sci-Fi', 'Thriller', 'Drama'],
       score: 9.0,
       synopsis: 'A group of friends accidentally create a time machine, leading to dramatic consequences as they attempt to prevent global disaster.',
@@ -67,8 +67,8 @@ export default function handler(req, res) {
     {
       id: '3',
       title: 'Violet Evergarden',
-      // Prioritize TMDb high-quality image - corrected URL
-      image: 'https://media.themoviedb.org/t/p/original/ImvHbM4GsJJykarnOzhtpG6ax6.jpg',
+      // Use TMDb image with correct domain
+      image: 'https://image.tmdb.org/t/p/original/ImvHbM4GsJJykarnOzhtpG6ax6.jpg',
       genres: ['Drama', 'Fantasy', 'Slice of Life'],
       score: 8.9,
       synopsis: 'A former soldier becomes a letter writer and explores the meaning of love as she recovers from the war.',
@@ -91,8 +91,8 @@ export default function handler(req, res) {
     {
       id: '4',
       title: 'Attack on Titan',
-      // Prioritize TMDb high-quality image - corrected URL
-      image: 'https://media.themoviedb.org/t/p/original/hTP1DtLGFamjfsWH5QfwQF2xJHz.jpg',
+      // Use TMDb image with correct domain
+      image: 'https://image.tmdb.org/t/p/original/hTP1DtLGFamjfsWH5QfwQF2xJHz.jpg',
       genres: ['Action', 'Drama', 'Fantasy', 'Mystery'],
       score: 8.5,
       synopsis: 'In a world where humanity lives within cities surrounded by enormous walls due to the Titans, gigantic humanoid creatures who devour humans seemingly without reason.',
@@ -115,8 +115,8 @@ export default function handler(req, res) {
     {
       id: '5',
       title: 'Your Name',
-      // Prioritize TMDb high-quality image - better ratio for portrait display
-      image: 'https://media.themoviedb.org/t/p/original/q719jXXEzOoYaps6babgKnONONX.jpg',
+      // Use TMDb image with correct domain - better aspect ratio for portrait display
+      image: 'https://image.tmdb.org/t/p/original/q719jXXEzOoYaps6babgKnONONX.jpg',
       genres: ['Romance', 'Supernatural', 'Drama'],
       score: 9.0,
       synopsis: 'Two strangers find themselves linked in a bizarre way. When a connection forms, will distance be the only thing to keep them apart?',
