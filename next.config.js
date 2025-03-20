@@ -48,8 +48,8 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
-  // Basic configuration for Vercel compatibility
-  distDir: '.next',
+  // Ensure compatibility with Vercel serverless deployment
+  output: 'serverless',
 };
 
 module.exports = nextConfig;
