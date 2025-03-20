@@ -77,6 +77,13 @@ export default function QuestionsPage() {
   useEffect(() => {
     // Fetch questions from API if real API is enabled
     async function fetchQuestions() {
+      // Debug environment variables
+      console.log('Environment check:', { 
+        NEXT_PUBLIC_USE_REAL_API: process.env.NEXT_PUBLIC_USE_REAL_API,
+        isTrue: process.env.NEXT_PUBLIC_USE_REAL_API === 'true',
+        sessionId
+      });
+      
       if (process.env.NEXT_PUBLIC_USE_REAL_API === 'true' && sessionId) {
         try {
           setIsLoading(true);
@@ -87,6 +94,8 @@ export default function QuestionsPage() {
           console.log('Fetching questions from:', apiUrl);
           const response = await fetch(apiUrl);
           
+          console.log('Questions API response status:', response.status);
+          
           if (!response.ok) {
             console.error('Failed to fetch questions:', response.status);
             // Fall back to mock questions
@@ -94,6 +103,7 @@ export default function QuestionsPage() {
           }
           
           const data = await response.json();
+          console.log('Questions API response data:', data);
           
           if (data.questions && data.questions.length > 0) {
             console.log('Fetched', data.questions.length, 'questions from API');
