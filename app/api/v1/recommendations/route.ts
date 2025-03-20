@@ -164,7 +164,7 @@ export async function GET(request: NextRequest): Promise<Response> {
                     const searchQuery = `${anime.title} ${isMovie ? 'movie' : ''} anime trailer official`;
                     const searchResults = await youtubeClient.searchVideos(searchQuery, 1);
                     
-                    if (searchResults?.data?.length > 0) {
+                    if (searchResults?.data && searchResults.data.length > 0) {
                       const videoItem = searchResults.data[0];
                       // Handle the case where id can be a string or VideoId object
                       const videoId = typeof videoItem.id === 'string' ? 
