@@ -208,7 +208,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       // For now, use the answers to generate dimension values
       
       // Map the answers to dimensions
-      const dimensionMapping = {
+      // Define a type for our dimension mapping
+      type DimensionValue = { name: string; value: number };
+      type AnswerOptions = Record<string, DimensionValue>;
+      type DimensionMap = Record<string, AnswerOptions>;
+      
+      const dimensionMapping: DimensionMap = {
         'visual-style': {
           'clean-simple': { name: 'visualComplexity', value: 3.2 },
           'balanced': { name: 'visualComplexity', value: 6.5 },
@@ -242,7 +247,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       
       // Update dimensions based on answers
       Object.entries(answers).forEach(([question, answer]) => {
-        const mapping = dimensionMapping[question]?.[answer];
+        // Make sure to cast the strings to avoid TypeScript indexing errors
+        const questionKey = question as keyof DimensionMap;
+        const answerKey = answer as string;
+        
+        // Now TypeScript knows these are safe to access
+        const mapping = dimensionMapping[questionKey]?.[answerKey];
         if (mapping) {
           profile.dimensions[mapping.name] = mapping.value;
         }
