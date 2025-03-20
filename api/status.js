@@ -1,4 +1,4 @@
-// Root API endpoint
+// Root API endpoint for status checks
 export default function handler(req, res) {
   res.status(200).json({
     name: 'Ani-Sage API',

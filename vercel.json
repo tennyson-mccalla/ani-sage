@@ -10,7 +10,7 @@
     }
   },
   "rewrites": [
-    { "source": "/api", "destination": "/api/index.js" },
+    { "source": "/api/status", "destination": "/api/status.js" },
     { "source": "/api/hello", "destination": "/api/hello.js" },
     { "source": "/api/v1", "destination": "/app/api/v1/route" },
     { "source": "/api/v1/:path*", "destination": "/app/api/v1/:path*" }
