@@ -4,6 +4,7 @@ import { createApiAdapter } from '@/app/lib/anime-api-adapter';
 import { corsHeaders } from '@/app/lib/utils';
 import { calculateMatchScore, getMatchExplanations } from '@/app/lib/anime-attribute-mapper';
 import malSyncClient from '@/app/lib/utils/malsync/client';
+import { VideoId } from '@/app/lib/providers/youtube/client';
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
@@ -163,8 +164,12 @@ export async function GET(request: NextRequest): Promise<Response> {
                     const searchQuery = `${anime.title} ${isMovie ? 'movie' : ''} anime trailer official`;
                     const searchResults = await youtubeClient.searchVideos(searchQuery, 1);
                     
-                    if (searchResults?.items?.length > 0) {
-                      const videoId = searchResults.items[0].id.videoId;
+                    if (searchResults?.data?.length > 0) {
+                      const videoItem = searchResults.data[0];
+                      // Handle the case where id can be a string or VideoId object
+                      const videoId = typeof videoItem.id === 'string' ? 
+                                     videoItem.id : 
+                                     (videoItem.id as VideoId).videoId;
                       trailerUrl = `https://www.youtube.com/watch?v=${videoId}`;
                       console.log(`Found trailer for ${anime.title} via fallback: ${trailerUrl}`);
                     }
