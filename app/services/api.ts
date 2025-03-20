@@ -17,7 +17,7 @@ const mockRecommendations: AnimeRecommendation[] = [
   {
     id: '1',
     title: 'Fullmetal Alchemist: Brotherhood',
-    image: 'https://dummyimage.com/300x450/3498db/ffffff&text=Anime+1',
+    image: 'https://dummyimage.com/600x900/3498db/ffffff&text=Anime+1',
     genres: ['Action', 'Adventure', 'Drama', 'Fantasy'],
     score: 9.1,
     synopsis: 'Two brothers search for a Philosopher\'s Stone after an attempt to revive their deceased mother goes wrong, changing their bodies.',
@@ -32,7 +32,7 @@ const mockRecommendations: AnimeRecommendation[] = [
   {
     id: '2',
     title: 'Steins;Gate',
-    image: 'https://dummyimage.com/300x450/e74c3c/ffffff&text=Anime+2',
+    image: 'https://dummyimage.com/600x900/e74c3c/ffffff&text=Anime+2',
     genres: ['Sci-Fi', 'Thriller', 'Drama'],
     score: 9.0,
     synopsis: 'A group of friends accidentally create a time machine, leading to dramatic consequences as they attempt to prevent global disaster.',
@@ -47,7 +47,7 @@ const mockRecommendations: AnimeRecommendation[] = [
   {
     id: '3',
     title: 'Violet Evergarden',
-    image: 'https://dummyimage.com/300x450/27ae60/ffffff&text=Anime+3',
+    image: 'https://dummyimage.com/600x900/27ae60/ffffff&text=Anime+3',
     genres: ['Drama', 'Fantasy', 'Slice of Life'],
     score: 8.9,
     synopsis: 'A former soldier becomes a letter writer and explores the meaning of love as she recovers from the war.',

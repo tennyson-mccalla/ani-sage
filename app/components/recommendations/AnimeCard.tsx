@@ -120,10 +120,10 @@ export default function AnimeCard({ anime, index }: AnimeCardProps) {
               // Add a second error handler in case the MAL image also fails
               e.currentTarget.onerror = (e2) => {
                 (e2.target as HTMLImageElement).onerror = null;
-                (e2.target as HTMLImageElement).src = `https://dummyimage.com/411x616/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+                (e2.target as HTMLImageElement).src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
               };
             } else {
-              e.currentTarget.src = `https://dummyimage.com/411x616/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+              e.currentTarget.src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
             }
           }}
         />
