@@ -44,22 +44,16 @@ const setupRoutesManifest = async () => {
 setupRoutesManifest();
 
 const nextConfig = {
-  // Configuration for dynamic routes that can't be statically generated
+  // Configuration for external packages
   experimental: {
     serverComponentsExternalPackages: ['@node-rs/argon2'],
-    // These settings tell Next.js to optimize for Vercel deployment
-    serverActions: true,
-    serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
-  // Ensure compatibility with Vercel deployment
-  output: 'standalone',
-  // Disable static optimization for API routes
-  compiler: {
-    styledComponents: true,
-  },
+  // Help with TypeScript errors during build
   typescript: {
-    ignoreBuildErrors: true, // For now, to allow deployment to proceed
+    ignoreBuildErrors: true,
   },
+  // Generate a standalone output
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
