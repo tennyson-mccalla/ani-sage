@@ -5,9 +5,12 @@
   "buildCommand": "npm run build",
   "regions": ["iad1"],
   "functions": {
-    "app/api/v1/**/*.ts": {
+    "api/*.js": {
       "memory": 1024,
       "maxDuration": 10
     }
-  }
+  },
+  "routes": [
+    { "src": "/api/v1/(.*)", "dest": "/app/api/v1/$1" }
+  ]
 }

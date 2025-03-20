@@ -52,8 +52,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Generate a standalone output
-  output: 'standalone',
+  // Default Next.js output
+  distDir: '.next',
 };
 
 module.exports = nextConfig;
