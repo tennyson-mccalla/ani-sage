@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "basePath": "",
+  "redirects": [],
+  "rewrites": [],
+  "headers": [],
+  "dynamicRoutes": [
+    {
+      "page": "/api/v1/anime/[id]",
+      "regex": "^/api/v1/anime/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "id": "id"
+      },
+      "namedRegex": "^/api/v1/anime/(?<id>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": []
+}
