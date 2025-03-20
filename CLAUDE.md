@@ -35,3 +35,6 @@
 - **Default Values**: For fallbacks, use descriptive placeholders like 'API_KEY_MISSING' rather than empty strings
 - **Pre-commit Checks**: Scan code for potential secrets before committing
 - **Error Handling**: Gracefully handle missing API keys with user-friendly error messages
+
+## Command-Line Requests
+- If you need to run a curl command ask the user to do it and give them the command to run.
