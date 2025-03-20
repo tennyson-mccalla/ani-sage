@@ -1,18 +1,10 @@
 {
   "version": 2,
-  "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "functions": {
-    "api/*.js": {
-      "memory": 1024,
-      "maxDuration": 10
+  "buildCommand": "next build",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  },
-  "rewrites": [
-    { "source": "/api/status", "destination": "/api/status.js" },
-    { "source": "/api/hello", "destination": "/api/hello.js" },
-    { "source": "/api/v1", "destination": "/app/api/v1/route" },
-    { "source": "/api/v1/:path*", "destination": "/app/api/v1/:path*" }
   ]
 }
