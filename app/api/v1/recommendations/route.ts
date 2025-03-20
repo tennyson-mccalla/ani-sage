@@ -140,7 +140,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             // Format recommendations for frontend
             recommendations = await Promise.all(topRecommendations.map(async (anime) => {
               // Try to get a trailer if not already present
-              let trailerUrl = anime.trailer;
+              let trailerUrl: string | null | undefined = anime.trailer;
               
               if (!trailerUrl && process.env.YOUTUBE_API_KEY) {
                 try {
