@@ -5,7 +5,7 @@ import { corsHeaders } from '@/app/lib/utils';
 import { calculateMatchScore, getMatchExplanations } from '@/app/lib/anime-attribute-mapper';
 import malSyncClient from '@/app/lib/utils/malsync/client';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     console.log("GET /api/v1/recommendations called");
     const sessionId = request.nextUrl.searchParams.get('sessionId');
@@ -373,7 +373,8 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error("Error in API recommendation flow:", error);
         console.log("Falling back to mock recommendations due to error");
-        return useMockRecommendations(profile, parseInt(count, 10));
+        const mockResponse = useMockRecommendations(profile, parseInt(count, 10));
+        return NextResponse.json(mockResponse, { headers: corsHeaders() });
       }
     } else {
       console.log("Using mock anime database as requested");
@@ -396,7 +397,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to generate mock recommendations
-function useMockRecommendations(profile, count) {
+function useMockRecommendations(profile, count): { recommendations: any[] } {
   // Create a selection of high-quality anime recommendations
   const animeDatabase = [
     {
