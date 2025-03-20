@@ -332,8 +332,9 @@ export async function GET(request: NextRequest): Promise<Response> {
               const scores = {} as Record<string, number>;
               if (anime.score) {
                 scores.anilist = anime.score;
-              } else if (anime.averageScore) {
-                scores.anilist = anime.averageScore / 10; // Convert to 10-point scale if needed
+              } else if ('averageScore' in anime) {
+                // Because TypeScript doesn't know about this property, we need to use an assertion
+                scores.anilist = (anime as any).averageScore / 10; // Convert to 10-point scale if needed
               }
               
               // Add additional scores if available
