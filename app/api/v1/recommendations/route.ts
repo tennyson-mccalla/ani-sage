@@ -643,6 +643,7 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
   type MockAnimeEntry = typeof animeDatabase[0] & { 
     matchScore?: number;
     imageUrl?: string; // Add imageUrl for compatibility with the mapping code
+    synopsis?: string; // Add synopsis for compatibility with the mapping code
   };
   let animeList: MockAnimeEntry[] = [];
   
