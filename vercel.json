@@ -3,14 +3,16 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "regions": ["iad1"],
   "functions": {
     "api/*.js": {
       "memory": 1024,
       "maxDuration": 10
     }
   },
-  "routes": [
-    { "src": "/api/v1/(.*)", "dest": "/app/api/v1/$1" }
+  "rewrites": [
+    { "source": "/api", "destination": "/api/index.js" },
+    { "source": "/api/hello", "destination": "/api/hello.js" },
+    { "source": "/api/v1", "destination": "/app/api/v1/route" },
+    { "source": "/api/v1/:path*", "destination": "/app/api/v1/:path*" }
   ]
 }
