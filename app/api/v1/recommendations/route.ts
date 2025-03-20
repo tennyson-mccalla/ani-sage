@@ -374,7 +374,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         // If we couldn't get real API data, fall back to mock data
         if (fallbackToMock || recommendations.length === 0) {
           console.log("Using mock anime database as fallback");
-          return useMockRecommendations(profile, parseInt(count, 10));
+          const mockResponse = useMockRecommendations(profile, parseInt(count, 10));
+          return NextResponse.json(mockResponse, { headers: corsHeaders() });
         }
       } catch (error) {
         console.error("Error in API recommendation flow:", error);
