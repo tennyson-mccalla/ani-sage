@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/app/lib/db';
+import { db, Profile } from '@/app/lib/db';
 import { createApiAdapter } from '@/app/lib/anime-api-adapter';
 import { corsHeaders } from '@/app/lib/utils';
 import { calculateMatchScore, getMatchExplanations } from '@/app/lib/anime-attribute-mapper';
@@ -404,7 +404,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 }
 
 // Helper function to generate mock recommendations
-function useMockRecommendations(profile, count): { recommendations: any[] } {
+function useMockRecommendations(profile: Profile | null, count: number): { recommendations: any[] } {
   // Create a selection of high-quality anime recommendations
   const animeDatabase = [
     {
