@@ -4,6 +4,8 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
+  // Set output to export for compatibility with Vercel deployment
+  output: 'standalone',
   // Route configuration for dynamic API routes
   async rewrites() {
     return {
@@ -12,13 +14,6 @@ const nextConfig = {
         {
           source: '/api/v1/:path*',
           destination: '/api/v1/:path*',
-          has: [
-            {
-              type: 'query',
-              key: 'sessionId',
-              value: undefined,
-            },
-          ],
         },
       ],
     };
