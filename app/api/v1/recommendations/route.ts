@@ -834,7 +834,8 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
         'Generated based on your psychological profile',
         'Matches your content preferences',
         'Aligns with your viewing history'
-      ]
+      ],
+      trailer: undefined // Add trailer property, even if undefined
     });
   }
 
