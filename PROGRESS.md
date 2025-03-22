@@ -1,5 +1,40 @@
 # Ani-Sage Development Progress
 
+## March 22, 2025: Recommendation Engine Improvements
+
+1. ✅ Fixed API endpoint routing issue:
+   - Updated frontend api.ts to use `/api/v1/` routes instead of `/api/` routes
+   - Ensures app is using v1 API implementation rather than mock routes
+
+2. ✅ Improved recommendation engine diversity:
+   - Lowered confidence threshold from 0.6 to 0.4 for more inclusive matching
+   - Reduced popularity bias (from 1/1000 to 1/5000)
+   - Added more granular clustering with 5-dimension bucketing
+   - Enhanced diversification algorithm to use cluster scoring
+   - Increased retrieved anime count to 10x the results needed
+
+3. ✅ Added tests:
+   - Set up Jest testing for recommendation engine
+   - Validated diversification, clustering, and profile-based matching
+   - Ensured different user profiles get different recommendations
+
+## Next Steps
+
+1. Integrate top 1000 anime from AniList API
+   - Set up a data pipeline to regularly fetch popular anime
+   - Store in local database or cache to reduce API dependency
+   - Map psychological attributes for anime based on metadata
+
+2. Improve tests with real user data
+   - Create test profiles with deliberately opposite answers
+   - Ensure recommendations differ significantly between users
+   - Validate impact of each question on recommendation pathways
+
+3. Enhance clustering algorithm
+   - Further refine the clustering parameters
+   - Consider adding weighted dimensions
+   - Add finer-grained emotional tone clustering
+
 ## Project Status
 
 The Ani-Sage project is now ~95% complete. The key components have been implemented and are ready for integration and testing.

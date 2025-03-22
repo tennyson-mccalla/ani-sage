@@ -105,10 +105,12 @@ export async function GET(request: NextRequest): Promise<Response> {
         try {
           // Attempt to get popular anime from AniList
           console.log("Fetching anime from AniList API");
-          const animeList = await apiAdapter.getPopularAnime(parseInt(count, 10) * 3); // Get more than we need to filter by profile
+          const animeList = await apiAdapter.getPopularAnime(parseInt(count, 10) * 10); // Get more anime titles for better diversity
           
           if (animeList && animeList.length > 0) {
             console.log(`Successfully fetched ${animeList.length} anime titles from API`);
+            console.log("User profile dimensions:", JSON.stringify(profile.dimensions));
+            console.log("User profile confidences:", JSON.stringify(profile.confidences));
             
             // Score the anime based on user profile
             const scoredAnime = animeList.map(anime => {

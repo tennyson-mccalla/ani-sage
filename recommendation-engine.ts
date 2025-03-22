@@ -36,7 +36,7 @@ export function recommendAnime(
 ): RecommendationResult[] {
   const {
     count = 10,
-    minScore = 0.6,
+    minScore = 0.4,
     excludeIds = [],
     includeClusters = [],
     excludeClusters = []
@@ -99,7 +99,7 @@ export function initialFiltering(
     .filter(dimension => {
       const confidence = userProfile.confidences[dimension] || 0;
       const importanceThreshold = 0.6;
-      const confidenceThreshold = 0.6;
+      const confidenceThreshold = 0.4;
       
       return confidence > confidenceThreshold && 
              PsychologicalDimensions[dimension]?.importance > importanceThreshold;
@@ -209,14 +209,22 @@ export function createFeatureVector(anime: AnimeTitle): AnimeFeatureVector {
  * @returns Cluster ID string
  */
 export function determineClusterId(features: AnimeFeatureVector): string {
-  // Create discrete buckets for each feature dimension
-  const visualBucket = Math.floor(features.visualStyle / 2.5); // 0-4
-  const narrativeBucket = Math.floor(features.narrativeStyle / 2.5); // 0-4
-  const emotionBucket = features.emotionalTone >= 0 ? 'pos' : 'neg';
-  const characterBucket = Math.floor(features.characterDepth / 5); // 0-2
+  // Create more fine-grained buckets for each feature dimension to increase diversity
+  const visualBucket = Math.floor(features.visualStyle / 2); // 0-5 (more granular)
+  const narrativeBucket = Math.floor(features.narrativeStyle / 2); // 0-5 (more granular)
   
-  // Combine buckets into a cluster ID
-  return `${visualBucket}-${narrativeBucket}-${characterBucket}-${emotionBucket}`;
+  // Add positive/negative distinction with intensity level
+  const emotionIntensity = Math.floor(Math.abs(features.emotionalTone) / 2.5); // 0-4
+  const emotionBucket = features.emotionalTone >= 0 ? `pos${emotionIntensity}` : `neg${emotionIntensity}`;
+  
+  // More granular character depth buckets
+  const characterBucket = Math.floor(features.characterDepth / 3.33); // 0-3 (more granular)
+  
+  // Add pacing as a clustering dimension for more diversity
+  const pacingBucket = Math.floor(features.pacing / 3.33); // 0-3
+  
+  // Combine buckets into a more specific cluster ID
+  return `${visualBucket}-${narrativeBucket}-${characterBucket}-${emotionBucket}-p${pacingBucket}`;
 }
 
 /**
@@ -255,10 +263,10 @@ export function selectClusterRepresentatives(
       score: calculateMatchScore(anime, userProfile)
     }));
     
-    // Get top 2-3 from each cluster
+    // Get top 1-2 from each cluster to ensure more cluster diversity
     const topFromCluster = scoredAnime
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
+      .slice(0, 2);
     
     representatives.push(...topFromCluster);
   });
@@ -318,38 +326,60 @@ export function findRelevantClusters(
  * @returns Array of adjacent cluster IDs
  */
 function generateAdjacentClusters(features: AnimeFeatureVector): string[] {
-  const visualBucket = Math.floor(features.visualStyle / 2.5);
-  const narrativeBucket = Math.floor(features.narrativeStyle / 2.5);
-  const emotionBucket = features.emotionalTone >= 0 ? 'pos' : 'neg';
-  const characterBucket = Math.floor(features.characterDepth / 5);
+  // Use the same bucketing logic as in determineClusterId for consistency
+  const visualBucket = Math.floor(features.visualStyle / 2);
+  const narrativeBucket = Math.floor(features.narrativeStyle / 2);
+  const emotionIntensity = Math.floor(Math.abs(features.emotionalTone) / 2.5);
+  const emotionBucket = features.emotionalTone >= 0 ? `pos${emotionIntensity}` : `neg${emotionIntensity}`;
+  const characterBucket = Math.floor(features.characterDepth / 3.33);
+  const pacingBucket = Math.floor(features.pacing / 3.33);
   
   const adjacentClusters: string[] = [];
   
-  // Visual variation
+  // Visual variation (more granular)
   if (visualBucket > 0) {
-    adjacentClusters.push(`${visualBucket-1}-${narrativeBucket}-${characterBucket}-${emotionBucket}`);
+    adjacentClusters.push(`${visualBucket-1}-${narrativeBucket}-${characterBucket}-${emotionBucket}-p${pacingBucket}`);
   }
-  if (visualBucket < 4) {
-    adjacentClusters.push(`${visualBucket+1}-${narrativeBucket}-${characterBucket}-${emotionBucket}`);
+  if (visualBucket < 5) {
+    adjacentClusters.push(`${visualBucket+1}-${narrativeBucket}-${characterBucket}-${emotionBucket}-p${pacingBucket}`);
   }
   
-  // Narrative variation
+  // Narrative variation (more granular)
   if (narrativeBucket > 0) {
-    adjacentClusters.push(`${visualBucket}-${narrativeBucket-1}-${characterBucket}-${emotionBucket}`);
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket-1}-${characterBucket}-${emotionBucket}-p${pacingBucket}`);
   }
-  if (narrativeBucket < 4) {
-    adjacentClusters.push(`${visualBucket}-${narrativeBucket+1}-${characterBucket}-${emotionBucket}`);
+  if (narrativeBucket < 5) {
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket+1}-${characterBucket}-${emotionBucket}-p${pacingBucket}`);
   }
   
-  // Emotional tone variation
-  adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-${emotionBucket === 'pos' ? 'neg' : 'pos'}`);
+  // Emotional tone variations - try different intensities and polarities
+  const oppositePolarity = features.emotionalTone >= 0 ? 'neg' : 'pos';
+  // Add opposite polarity with same intensity
+  adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-${oppositePolarity}${emotionIntensity}-p${pacingBucket}`);
   
-  // Character depth variation
+  // Try different emotional intensities
+  for (let i = 0; i < 4; i++) {
+    if (i !== emotionIntensity) {
+      // Same polarity, different intensity
+      const polarityPrefix = features.emotionalTone >= 0 ? 'pos' : 'neg';
+      adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-${polarityPrefix}${i}-p${pacingBucket}`);
+    }
+  }
+  
+  // Character depth variation (more granular)
   if (characterBucket > 0) {
-    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket-1}-${emotionBucket}`);
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket-1}-${emotionBucket}-p${pacingBucket}`);
   }
-  if (characterBucket < 2) {
-    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket+1}-${emotionBucket}`);
+  if (characterBucket < 3) {
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket+1}-${emotionBucket}-p${pacingBucket}`);
+  }
+  
+  // Pacing variation
+  if (pacingBucket > 0) {
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-${emotionBucket}-p${pacingBucket-1}`);
+  }
+  if (pacingBucket < 3) {
+    adjacentClusters.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-${emotionBucket}-p${pacingBucket+1}`);
   }
   
   return adjacentClusters;
@@ -372,8 +402,8 @@ export function calculateMatchScore(
     { confidenceWeighting: true, dimensionImportance: true }
   );
   
-  // Add a small bonus for popularity to break ties between similar anime
-  const popularityBonus = Math.min(anime.popularity, 100) / 1000;
+  // Add a tiny bonus for popularity to break ties between similar anime, but keep it small to avoid dominating the recommendation
+  const popularityBonus = Math.min(anime.popularity, 100) / 5000;
   
   return similarityResult.overallScore + popularityBonus;
 }
@@ -389,7 +419,7 @@ export function calculateMatchScore(
 export function detailedScoring(
   representatives: { anime: AnimeTitle; score: number }[],
   userProfile: UserProfile,
-  minScore: number = 0.6
+  minScore: number = 0.4
 ): { anime: AnimeTitle; score: number }[] {
   // Sort by score descending
   const sortedResults = representatives
@@ -416,29 +446,90 @@ export function diversifyResults(
   
   const diverseResults: { anime: AnimeTitle; score: number }[] = [];
   const usedClusters = new Set<string>();
+  const clusterScores: { [clusterId: string]: { count: number; totalScore: number; avgScore?: number } } = {};
   
-  // First pass - get the highest scoring anime from each cluster
+  // Calculate average score by cluster to find strongest clusters
   results.forEach(result => {
     const clusterId = result.anime.cluster;
+    if (!clusterId) return;
     
-    if (clusterId && !usedClusters.has(clusterId)) {
-      diverseResults.push(result);
-      usedClusters.add(clusterId);
-      
-      // Stop if we reached target count
-      if (diverseResults.length >= targetCount) {
-        return;
-      }
+    if (!clusterScores[clusterId]) {
+      clusterScores[clusterId] = { count: 0, totalScore: 0 };
+    }
+    clusterScores[clusterId].count++;
+    clusterScores[clusterId].totalScore += result.score;
+  });
+  
+  // Calculate average scores
+  Object.keys(clusterScores).forEach(clusterId => {
+    if (clusterScores[clusterId].count > 0) {
+      clusterScores[clusterId].avgScore = 
+        clusterScores[clusterId].totalScore / clusterScores[clusterId].count;
     }
   });
   
-  // If we still need more recommendations, add the highest scoring
-  // remaining ones regardless of cluster
-  if (diverseResults.length < targetCount) {
-    const remainingResults = results.filter(result => {
-      const clusterId = result.anime.cluster;
-      return !clusterId || !usedClusters.has(clusterId);
+  // Group results by cluster
+  const clusterGroups: { [clusterId: string]: { anime: AnimeTitle; score: number }[] } = {};
+  
+  results.forEach(result => {
+    const clusterId = result.anime.cluster;
+    if (!clusterId) return;
+    
+    if (!clusterGroups[clusterId]) {
+      clusterGroups[clusterId] = [];
+    }
+    clusterGroups[clusterId].push(result);
+  });
+  
+  // Sort clusters by average score
+  const sortedClusterIds = Object.keys(clusterScores)
+    .sort((a, b) => {
+      const scoreA = clusterScores[a].avgScore || 0;
+      const scoreB = clusterScores[b].avgScore || 0;
+      return scoreB - scoreA;
     });
+  
+  // First pass - get the highest scoring anime from best clusters
+  for (const clusterId of sortedClusterIds) {
+    if (diverseResults.length >= targetCount) break;
+    
+    if (!usedClusters.has(clusterId) && clusterGroups[clusterId]?.length > 0) {
+      // Sort anime within cluster by score
+      const sortedClusterResults = clusterGroups[clusterId]
+        .sort((a, b) => b.score - a.score);
+      
+      // Take the best anime from this cluster
+      diverseResults.push(sortedClusterResults[0]);
+      usedClusters.add(clusterId);
+    }
+  }
+  
+  // Second pass - try to add another anime from the highest scoring clusters
+  // if we still need more recommendations and those clusters have multiple good options
+  if (diverseResults.length < targetCount) {
+    for (const clusterId of sortedClusterIds) {
+      if (diverseResults.length >= targetCount) break;
+      
+      if (clusterGroups[clusterId]?.length > 1) {
+        // Sort anime within cluster by score
+        const sortedClusterResults = clusterGroups[clusterId]
+          .sort((a, b) => b.score - a.score);
+        
+        // Take the second best anime only if it's score is still good
+        if (sortedClusterResults[1].score > 0.7) {
+          diverseResults.push(sortedClusterResults[1]);
+        }
+        
+        if (diverseResults.length >= targetCount) break;
+      }
+    }
+  }
+  
+  // Third pass - add remaining high-scoring anime regardless of cluster
+  if (diverseResults.length < targetCount) {
+    // Get all anime we haven't used yet
+    const usedAnimeIds = new Set(diverseResults.map(r => r.anime.id));
+    const remainingResults = results.filter(result => !usedAnimeIds.has(result.anime.id));
     
     // Sort remaining by score and add until we reach desired count
     const sortedRemaining = remainingResults.sort((a, b) => b.score - a.score);

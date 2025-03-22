@@ -131,7 +131,7 @@ export const apiService = {
     
     if (useRealApi) {
       try {
-        const apiUrl = `/api/session`;
+        const apiUrl = `/api/v1/session`;
         console.log('Posting to session API:', apiUrl);
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -175,7 +175,7 @@ export const apiService = {
     
     if (useRealApi && sessionId) {
       try {
-        const apiUrl = `/api/recommendations?sessionId=${sessionId}`;
+        const apiUrl = `/api/v1/recommendations?sessionId=${sessionId}`;
         console.log('Fetching recommendations from:', apiUrl);
         const response = await fetch(apiUrl);
         
@@ -222,7 +222,7 @@ export const apiService = {
     
     if (useRealApi && sessionId) {
       try {
-        const apiUrl = `/api/profile?sessionId=${sessionId}`;
+        const apiUrl = `/api/v1/profile?sessionId=${sessionId}`;
         console.log('Fetching profile from:', apiUrl);
         const response = await fetch(apiUrl);
         
@@ -267,7 +267,7 @@ export const apiService = {
     
     if (useRealApi && sessionId) {
       try {
-        const apiUrl = `/api/profile?sessionId=${sessionId}`;
+        const apiUrl = `/api/v1/profile?sessionId=${sessionId}`;
         console.log('Posting to profile API:', apiUrl, 'with answers:', answers);
         const response = await fetch(apiUrl, {
           method: 'POST',
