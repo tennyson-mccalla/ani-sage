@@ -112,19 +112,66 @@ export default function AnimeCard({ anime, index }: AnimeCardProps) {
           src={anime.image}
           alt={anime.title}
           className="absolute inset-0 w-full h-full object-cover"
+          onLoad={() => {
+            console.log(`Image loaded successfully for ${anime.title}: ${anime.image}`);
+          }}
           onError={(e) => {
+            console.error(`Error loading image for ${anime.title}: ${anime.image}`);
             e.currentTarget.onerror = null;
-            // Try to use MAL image if available, otherwise fall back to colored placeholder
-            if (anime.malImage) {
-              e.currentTarget.src = anime.malImage;
-              // Add a second error handler in case the MAL image also fails
-              e.currentTarget.onerror = (e2) => {
-                (e2.target as HTMLImageElement).onerror = null;
-                (e2.target as HTMLImageElement).src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
-              };
-            } else {
-              e.currentTarget.src = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title)}`;
-            }
+            
+            // Try to dynamically load manual mapping for this anime ID (if available)
+            const tryToUseManualMapping = async () => {
+              if (anime.id && typeof window !== 'undefined') {
+                try {
+                  // Dynamic import of the manual-mappings module to access the mappings
+                  const { getImageUrlFromManualMapping } = await import('@/app/lib/utils/malsync/manual-mappings');
+                  const manualImageUrl = getImageUrlFromManualMapping(anime.id);
+                  
+                  if (manualImageUrl) {
+                    console.log(`Found manual image mapping for ${anime.title} (ID: ${anime.id}): ${manualImageUrl}`);
+                    e.currentTarget.src = manualImageUrl;
+                    return true;
+                  }
+                } catch (err) {
+                  console.error(`Error using manual mapping for ${anime.title}:`, err);
+                }
+              }
+              return false;
+            };
+            
+            // This handles the case if manual mapping fails or is unavailable
+            const useFallbackImage = () => {
+              // Try to use MAL image if available, otherwise fall back to colored placeholder
+              if (anime.malImage) {
+                console.log(`Trying MAL fallback image for ${anime.title}: ${anime.malImage}`);
+                e.currentTarget.src = anime.malImage;
+                // Add a second error handler in case the MAL image also fails
+                e.currentTarget.onerror = (e2) => {
+                  console.error(`MAL fallback image also failed for ${anime.title}`);
+                  (e2.target as HTMLImageElement).onerror = null;
+                  // Use title-specific color for consistent placeholders
+                  const colorIndex = anime.id ? anime.id.toString().charCodeAt(0) % 4 : Math.floor(Math.random() * 4);
+                  const fallbackUrl = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][colorIndex]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+                  console.log(`Using placeholder image for ${anime.title}: ${fallbackUrl}`);
+                  (e2.target as HTMLImageElement).src = fallbackUrl;
+                };
+              } else {
+                // Use title-specific color for consistent placeholders
+                const colorIndex = anime.id ? anime.id.toString().charCodeAt(0) % 4 : Math.floor(Math.random() * 4);
+                const fallbackUrl = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][colorIndex]}/ffffff&text=${encodeURIComponent(anime.title)}`;
+                console.log(`Using placeholder image for ${anime.title}: ${fallbackUrl}`);
+                e.currentTarget.src = fallbackUrl;
+              }
+            };
+            
+            // Try to use manual mapping first, then fall back if needed
+            tryToUseManualMapping().then(success => {
+              if (!success) {
+                useFallbackImage();
+              }
+            }).catch(() => {
+              useFallbackImage();
+            });
           }}
         />
         <div className="absolute top-2 right-2 bg-purple-600 text-white text-sm font-bold px-2 py-1 rounded-full">

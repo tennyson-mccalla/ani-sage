@@ -4,7 +4,10 @@ import { createApiAdapter } from '@/app/lib/anime-api-adapter';
 import { corsHeaders } from '@/app/lib/utils';
 import { calculateMatchScore, getMatchExplanations } from '@/app/lib/anime-attribute-mapper';
 import malSyncClient from '@/app/lib/utils/malsync/client';
+import { getImageUrlFromManualMapping } from '@/app/lib/utils/malsync/manual-mappings';
 import { VideoId } from '@/app/lib/providers/youtube/client';
+import { getAnimeDataService } from '../../../../api/anime-data-service';
+import { recommendAnime } from '../../../../recommendation-engine';
 
 // Set dynamic runtime to handle URL search parameters
 export const dynamic = 'force-dynamic';
@@ -90,22 +93,61 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     let recommendations = [];
+    let fallbackToMock = false;
 
-    // Try to get real API recommendations first if useRealApi is true
+    // Try to use our enhanced recommendation engine first if useRealApi is true
     if (useRealApi) {
       try {
-        console.log("Attempting to fetch real API recommendations");
+        console.log("Using enhanced recommendation engine");
         
-        // Create API adapter and get anime recommendations
-        const apiAdapter = createApiAdapter();
+        // First try to use our local anime dataset
+        const animeDataService = getAnimeDataService();
+        let animeList = [];
+        let localDataUsed = false;
+        let topRecommendations = [];
         
-        // Check if we have sufficient API keys
-        let fallbackToMock = false;
+        // Check if the anime dataset is ready
+        if (animeDataService.getDatasetSize() > 0) {
+          console.log(`Using local dataset with ${animeDataService.getDatasetSize()} anime titles`);
+          console.log("User profile dimensions:", JSON.stringify(profile.dimensions));
+          console.log("User profile confidences:", JSON.stringify(profile.confidences));
+          
+          // Get all anime from our dataset
+          const animeDatabase = animeDataService.getAllAnime();
+          
+          // Generate recommendations using our enhanced engine
+          const results = recommendAnime(profile, animeDatabase, { 
+            count: parseInt(count, 10),
+            minScore: 0.4 // Min score threshold (0-1)
+          });
+          
+          if (results && results.length > 0) {
+            // Map our recommendation engine results to the expected format
+            topRecommendations = results.map(result => ({
+              ...result.anime,
+              matchScore: Math.round(result.score),
+              matchExplanations: result.matchReasons?.map(reason => reason.explanation) || [
+                'Matches your psychological profile',
+                'Aligns with your content preferences',
+                'Selected based on your profile dimensions'
+              ]
+            }));
+            
+            console.log(`Successfully generated ${topRecommendations.length} recommendations using local dataset`);
+            localDataUsed = true;
+          }
+        }
         
-        try {
+        // If local dataset isn't ready or didn't yield results, fall back to API
+        if (!localDataUsed || topRecommendations.length === 0) {
+          console.log("Local dataset not ready or empty, falling back to API");
+          
+          // Create API adapter and get anime recommendations
+          const apiAdapter = createApiAdapter();
+          
           // Attempt to get popular anime from AniList
           console.log("Fetching anime from AniList API");
-          const animeList = await apiAdapter.getPopularAnime(parseInt(count, 10) * 10); // Get more anime titles for better diversity
+          animeList = await apiAdapter.getPopularAnime(parseInt(count, 10) * 10); // Get more anime titles for better diversity
           
           if (animeList && animeList.length > 0) {
             console.log(`Successfully fetched ${animeList.length} anime titles from API`);
@@ -141,14 +183,36 @@ export async function GET(request: NextRequest): Promise<Response> {
             scoredAnime.sort((a, b) => b.matchScore - a.matchScore);
             
             // Take top N recommendations
-            const topRecommendations = scoredAnime.slice(0, parseInt(count, 10));
+            topRecommendations = scoredAnime.slice(0, parseInt(count, 10));
             
             // Format recommendations for frontend
             recommendations = await Promise.all(topRecommendations.map(async (anime) => {
               // Try to get a trailer if not already present
+              // Start with existing trailer, if available
               let trailerUrl: string | null | undefined = anime.trailer;
               
-              if (!trailerUrl && process.env.YOUTUBE_API_KEY) {
+              // Add manual trailer mappings for popular anime
+              const manualTrailerMap: Record<string, string> = {
+                '5114': 'https://www.youtube.com/watch?v=--IcmZkvL0Q', // FMA:B
+                '1535': 'https://www.youtube.com/watch?v=NlJZ-YgAt-c', // Death Note
+                '16498': 'https://www.youtube.com/watch?v=MGRm4IzK1SQ', // Attack on Titan
+                '20583': 'https://www.youtube.com/watch?v=vGuQeQsoRgU', // Tokyo Ghoul
+                '11757': 'https://www.youtube.com/watch?v=6ohYYtxfDCg', // Sword Art Online
+                '21856': 'https://www.youtube.com/watch?v=EPVkcwyLQQ8', // My Hero Academia
+                '101922': 'https://www.youtube.com/watch?v=VQGCKyvzIM4', // Demon Slayer
+                '20': 'https://www.youtube.com/watch?v=QczGoCmX-pI', // Naruto
+                '21': 'https://www.youtube.com/watch?v=S8_YwFLCh4U', // One Piece
+                '269': 'https://www.youtube.com/watch?v=0yk5H6vvMEk' // Bleach
+              };
+              
+              // Try manual mapping first
+              const animeIdForTrailer = anime.id?.toString() || '';
+              if (animeIdForTrailer && manualTrailerMap[animeIdForTrailer]) {
+                trailerUrl = manualTrailerMap[animeIdForTrailer];
+                console.log(`Using manual trailer mapping for ${anime.title}: ${trailerUrl}`);
+              }
+              // If no manual mapping and no existing trailer, try API-based lookup
+              else if (!trailerUrl && process.env.YOUTUBE_API_KEY) {
                 try {
                   console.log(`Searching for trailer for ${anime.title}`);
                   const youtubeClient = await import('@/app/lib/providers/youtube/client').then(module => 
@@ -177,6 +241,8 @@ export async function GET(request: NextRequest): Promise<Response> {
                                      (videoItem.id as VideoId).videoId;
                       trailerUrl = `https://www.youtube.com/watch?v=${videoId}`;
                       console.log(`Found trailer for ${anime.title} via fallback: ${trailerUrl}`);
+                    } else {
+                      console.log(`No YouTube results found for ${anime.title} - this is expected for some anime`);
                     }
                   }
                 } catch (error) {
@@ -186,7 +252,9 @@ export async function GET(request: NextRequest): Promise<Response> {
               
               // Start with AniList images, but we'll prioritize TMDb images when available
               let anilistImage = anime.image?.extraLarge || anime.image?.large || anime.imageUrl || anime.image?.medium;
-              let bestImage = null; // We'll set this after checking TMDb
+              console.log(`AniList image for ${anime.title}: ${anilistImage}`);
+              
+              let bestImage = anilistImage; // Default to AniList image unless we find better
               let tmdbScore = null;
               let tmdbId = null;
               
@@ -216,14 +284,19 @@ export async function GET(request: NextRequest): Promise<Response> {
                       // Get TMDb score
                       if (detailsResponse.data.vote_average) {
                         tmdbScore = detailsResponse.data.vote_average;
+                        console.log(`Found TMDb score for ${anime.title}: ${tmdbScore}`);
                       }
                       
                       // Use TMDb original size image if available
                       if (detailsResponse.data.poster_path) {
                         const tmdbImage = `https://image.tmdb.org/t/p/original${detailsResponse.data.poster_path}`;
-                        console.log(`Found higher quality TMDb image for ${anime.title} using direct ID`);
+                        console.log(`Found higher quality TMDb image for ${anime.title}: ${tmdbImage}`);
                         bestImage = tmdbImage; // Always prefer TMDb images when available
+                      } else {
+                        console.log(`No poster image found in TMDb for ${anime.title}, using AniList image`);
                       }
+                    } else {
+                      console.log(`No data returned from TMDb for ${anime.title}`);
                     }
                   } else {
                     console.log(`No TMDB ID found for ${anime.title} (ID: ${anime.id}) in MALSync, falling back to search`);
@@ -346,10 +419,37 @@ export async function GET(request: NextRequest): Promise<Response> {
               if (tmdbScore) scores.tmdb = tmdbScore;
               if (malScore) scores.mal = malScore;
               
-              return {
+              // CRITICAL UPDATE: Force hardcoded TMDb image URLs for popular anime
+              let finalImage = '';
+              
+              // First try to use a TMDb URL from our manual mappings
+              const animeId = anime.id?.toString() || '';
+              if (animeId) {
+                const manualImageUrl = getImageUrlFromManualMapping(animeId);
+                if (manualImageUrl) {
+                  // Use our verified image URL from manual mappings
+                  finalImage = manualImageUrl;
+                  console.log(`Using manual TMDb image mapping for ${anime.title}: ${finalImage}`);
+                }
+              }
+              // Then try dynamically found images
+              else if (bestImage && typeof bestImage === 'string' && bestImage.startsWith('http')) {
+                finalImage = bestImage;
+              } else if (anilistImage && typeof anilistImage === 'string' && anilistImage.startsWith('http')) {
+                finalImage = anilistImage;
+              } else {
+                // Fallback to placeholder with color based on anime ID for consistency
+                const colorIndex = anime.id ? anime.id.toString().charCodeAt(0) % 4 : Math.floor(Math.random() * 4);
+                finalImage = `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][colorIndex]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`;
+              }
+              
+              console.log(`Final image selected for ${anime.title}: ${finalImage}`);
+              
+              // Log the final result with important values
+              const finalResult = {
                 id: anime.id || `api-${Math.random().toString(36).substr(2, 9)}`,
                 title: anime.title,
-                image: bestImage || anilistImage || `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][Math.floor(Math.random() * 4)]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`,
+                image: finalImage,
                 genres: anime.genres || [],
                 score: anime.score, // Keep for backwards compatibility
                 scores: Object.keys(scores).length > 0 ? scores : undefined,
@@ -363,6 +463,13 @@ export async function GET(request: NextRequest): Promise<Response> {
                 ],
                 trailer: trailerUrl
               };
+              
+              console.log(`Recommendation created for ${anime.title}:
+- Image: ${finalResult.image}
+- Trailer: ${finalResult.trailer || 'None'}
+- Match score: ${finalResult.match}%`);
+              
+              return finalResult;
             }));
             
             console.log(`Successfully generated ${recommendations.length} API-based recommendations`);
@@ -370,10 +477,6 @@ export async function GET(request: NextRequest): Promise<Response> {
             console.log("No anime titles returned from API, falling back to mock data");
             fallbackToMock = true;
           }
-        } catch (apiError) {
-          console.error("API error occurred:", apiError);
-          console.log("Falling back to mock data due to API error");
-          fallbackToMock = true;
         }
         
         // If we couldn't get real API data, fall back to mock data
@@ -392,6 +495,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       console.log("Using mock anime database as requested");
       const mockRecommendations = useMockRecommendations(profile, parseInt(count, 10));
       recommendations = mockRecommendations.recommendations;
+    }
+    
+    // Log the actual recommendations being sent back
+    console.log(`Final recommendations (${recommendations.length}):`);
+    for (const rec of recommendations.slice(0, 5)) { // Log just first 5 to keep logs manageable
+      console.log(`- ${rec.title} (ID: ${rec.id})`);
+      console.log(`  Image: ${rec.image.substring(0, 100)}${rec.image.length > 100 ? '...' : ''}`);
+      console.log(`  Trailer: ${rec.trailer || 'None'}`);
     }
     
     return NextResponse.json({ recommendations }, { headers: corsHeaders() });
@@ -413,15 +524,15 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
   // Create a selection of high-quality anime recommendations
   const animeDatabase = [
     {
-      id: "1",
+      id: "5114",  // Added correct AniList ID
       title: "Fullmetal Alchemist: Brotherhood",
       genres: ["Action", "Adventure", "Drama", "Fantasy"],
       score: 9.1,
       description: "After a terrible alchemical ritual goes wrong in the Elric household, brothers Edward and Alphonse are left in a catastrophic situation. Ignoring the alchemical principle of Equivalent Exchange, the boys attempt human transmutation to bring their mother back to life. Instead, they suffer brutal personal loss: Alphonse's body disintegrates while Edward loses a leg and then sacrifices an arm to salvage Alphonse's soul by binding it to a large suit of armor. The brothers now seek the Philosopher's Stone to restore what they've lost.",
       image: {
-        medium: "https://dummyimage.com/300x450/3498db/ffffff&text=Fullmetal+Alchemist",
-        large: "https://dummyimage.com/600x900/3498db/ffffff&text=Fullmetal+Alchemist",
-        extraLarge: "https://dummyimage.com/900x1350/3498db/ffffff&text=Fullmetal+Alchemist"
+        medium: "https://image.tmdb.org/t/p/w300/5ZFUEOULaVml7pQuXxhpR2SmVUw.jpg",
+        large: "https://image.tmdb.org/t/p/w500/5ZFUEOULaVml7pQuXxhpR2SmVUw.jpg",
+        extraLarge: "https://image.tmdb.org/t/p/original/5ZFUEOULaVml7pQuXxhpR2SmVUw.jpg"
       },
       trailer: "https://www.youtube.com/watch?v=--IcmZkvL0Q",
       traits: {
@@ -433,15 +544,15 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
       }
     },
     {
-      id: "2",
+      id: "16498",  // Added correct AniList ID
       title: "Attack on Titan",
       genres: ["Action", "Drama", "Fantasy", "Mystery"],
       score: 9.0,
       description: "Centuries ago, mankind was slaughtered to near extinction by monstrous humanoid creatures called Titans, forcing humans to hide in fear behind enormous concentric walls. What makes these giants truly terrifying is that their taste for human flesh is not born out of hunger but what appears to be out of pleasure. To ensure their survival, the remnants of humanity began living within defensive barriers, resulting in one hundred years without a single titan encounter. However, that fragile calm is soon shattered when a colossal Titan manages to breach the supposedly impregnable outer wall, reigniting the fight for survival against the man-eating abominations.",
       image: {
-        medium: "https://dummyimage.com/300x450/e74c3c/ffffff&text=Attack+on+Titan",
-        large: "https://dummyimage.com/600x900/e74c3c/ffffff&text=Attack+on+Titan",
-        extraLarge: "https://dummyimage.com/900x1350/e74c3c/ffffff&text=Attack+on+Titan"
+        medium: "https://image.tmdb.org/t/p/w300/hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg",
+        large: "https://image.tmdb.org/t/p/w500/hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg",
+        extraLarge: "https://image.tmdb.org/t/p/original/hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg"
       },
       trailer: "https://www.youtube.com/watch?v=MGRm4IzK1SQ",
       traits: {
@@ -510,16 +621,17 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
       }
     },
     {
-      id: "6",
+      id: "1535",  // Added correct AniList ID
       title: "Death Note",
       genres: ["Mystery", "Psychological", "Supernatural", "Thriller"],
       score: 8.6,
       description: "A shinigami, as a god of death, can kill any person—provided they see their victim's face and write their victim's name in a notebook called a Death Note. One day, Ryuk, bored with the shinigami lifestyle and interested in seeing how a human would use a Death Note, drops one into the human realm. High school student and prodigy Light Yagami stumbles upon the Death Note and—after recognizing its power—decides to use it to rid the world of criminals. Later, his actions of wiping out countless criminals give him the moniker 'Kira,' a Japanese transliteration of the English word 'killer.'",
       image: {
-        medium: "https://dummyimage.com/300x450/7f8c8d/ffffff&text=Death+Note",
-        large: "https://dummyimage.com/600x900/7f8c8d/ffffff&text=Death+Note",
-        extraLarge: "https://dummyimage.com/900x1350/7f8c8d/ffffff&text=Death+Note"
+        medium: "https://image.tmdb.org/t/p/w300/tCZFfYTIwrR7n94J6G14Y4hAFU6.jpg",
+        large: "https://image.tmdb.org/t/p/w500/tCZFfYTIwrR7n94J6G14Y4hAFU6.jpg",
+        extraLarge: "https://image.tmdb.org/t/p/original/tCZFfYTIwrR7n94J6G14Y4hAFU6.jpg"
       },
+      trailer: "https://www.youtube.com/watch?v=NlJZ-YgAt-c",
       traits: {
         visualComplexity: 7.0,
         narrativeComplexity: 9.0,
@@ -586,15 +698,15 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
       }
     },
     {
-      id: "10",
+      id: "97940",  // Added correct AniList ID
       title: "Made in Abyss",
       genres: ["Adventure", "Drama", "Fantasy", "Mystery", "Sci-Fi"],
       score: 8.7,
       description: "The Abyss—a gaping chasm stretching down into the depths of the earth, filled with mysterious creatures and relics from a time long past. How did it come to be? What lies at the bottom? Countless brave individuals, known as Divers, have sought to solve these mysteries of the Abyss, fearlessly descending into its darkest realms. The best and bravest of the Divers, the White Whistles, are hailed as legends by those who remain on the surface. Riko, daughter of the missing White Whistle Lyza the Annihilator, aspires to become like her mother and explore the furthest reaches of the Abyss. However, just a novice Red Whistle herself, she is only permitted to roam its most upper layer. Even so, Riko has a chance encounter with a mysterious robot with the appearance of an ordinary young boy. She comes to name him Reg, and he has no recollection of the events preceding his discovery. Certain that the technology to create Reg must come from deep within the Abyss, the two decide to venture forth into the chasm to recover his memories and see the bottom of the great pit with their own eyes. However, they know not of the harsh reality that is the true existence of the Abyss.",
       image: {
-        medium: "https://dummyimage.com/300x450/d35400/ffffff&text=Made+in+Abyss",
-        large: "https://dummyimage.com/600x900/d35400/ffffff&text=Made+in+Abyss",
-        extraLarge: "https://dummyimage.com/900x1350/d35400/ffffff&text=Made+in+Abyss"
+        medium: "https://image.tmdb.org/t/p/w300/3NTAbAiao4JLzFQw6YxP1YZppM8.jpg",
+        large: "https://image.tmdb.org/t/p/w500/3NTAbAiao4JLzFQw6YxP1YZppM8.jpg",
+        extraLarge: "https://image.tmdb.org/t/p/original/3NTAbAiao4JLzFQw6YxP1YZppM8.jpg"
       },
       traits: {
         visualComplexity: 9.0,
@@ -797,8 +909,16 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
     return {
       id: anime.id || `rec-${index}`,
       title: anime.title || 'Unknown Anime',
-      image: anime.image?.extraLarge || anime.image?.large || anime.imageUrl || anime.image?.medium || 
-             `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`,
+      image: (anime.image?.extraLarge && anime.image?.extraLarge.startsWith('http')) 
+             ? anime.image.extraLarge
+             : (anime.image?.large && anime.image?.large.startsWith('http'))
+               ? anime.image.large
+               : (anime.imageUrl && anime.imageUrl.startsWith('http'))
+                 ? anime.imageUrl 
+                 : (anime.image?.medium && anime.image?.medium.startsWith('http'))
+                   ? anime.image.medium 
+                   // Fallback to your colorful placeholder image
+                   : `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`,
       genres: anime.genres || ['Animation'],
       score: anime.score || 7.5,
       scores: {
@@ -822,7 +942,7 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
     recommendations.push({
       id: `mock-${index}`,
       title: `Generated Recommendation ${index + 1}`,
-      image: `https://dummyimage.com/300x450/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=Anime+${index + 1}`,
+      image: `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=Anime+${index + 1}`,
       genres: ['Animation', 'Fantasy'],
       score: 7.0 + (Math.random() * 2.0),
       scores: {
