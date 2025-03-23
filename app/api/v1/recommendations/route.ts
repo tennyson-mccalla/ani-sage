@@ -1182,54 +1182,54 @@ function useMockRecommendations(profile: Profile | null, count: number): { recom
     }
   }
 
-    // Try to use manual mapping first
-    let imageUrl;
-    try {
-      if (anime.id) {
-        const manualImage = getImageUrlFromManualMapping(anime.id);
-        if (manualImage) {
-          console.log(`Found manual mapping for ${anime.title} (ID: ${anime.id}): ${manualImage}`);
-          imageUrl = manualImage;
-        }
+  // Try to use manual mapping first
+  let imageUrl;
+  try {
+    if (anime.id) {
+      const manualImage = getImageUrlFromManualMapping(anime.id);
+      if (manualImage) {
+        console.log(`Found manual mapping for ${anime.title} (ID: ${anime.id}): ${manualImage}`);
+        imageUrl = manualImage;
       }
-    } catch (err) {
-      console.error(`Error getting manual mapping for ${anime.title}:`, err);
     }
+  } catch (err) {
+    console.error(`Error getting manual mapping for ${anime.title}:`, err);
+  }
 
-    // If no manual mapping, use standard image selection logic
-    if (!imageUrl) {
-      imageUrl = (anime.image?.extraLarge && anime.image?.extraLarge.startsWith('http')) 
-                ? anime.image.extraLarge
-                : (anime.image?.large && anime.image?.large.startsWith('http'))
-                  ? anime.image.large
-                  : (anime.imageUrl && anime.imageUrl.startsWith('http'))
-                    ? anime.imageUrl 
-                    : (anime.image?.medium && anime.image?.medium.startsWith('http'))
-                      ? anime.image.medium 
-                      // Fallback to your colorful placeholder image
-                      : `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`;
-    }
+  // If no manual mapping, use standard image selection logic
+  if (!imageUrl) {
+    imageUrl = (anime.image?.extraLarge && anime.image?.extraLarge.startsWith('http')) 
+              ? anime.image.extraLarge
+              : (anime.image?.large && anime.image?.large.startsWith('http'))
+                ? anime.image.large
+                : (anime.imageUrl && anime.imageUrl.startsWith('http'))
+                  ? anime.imageUrl 
+                  : (anime.image?.medium && anime.image?.medium.startsWith('http'))
+                    ? anime.image.medium 
+                    // Fallback to your colorful placeholder image
+                    : `https://dummyimage.com/600x900/${['3498db', 'e74c3c', '27ae60', '8e44ad'][index % 4]}/ffffff&text=${encodeURIComponent(anime.title || 'Anime')}`;
+  }
 
-    return {
-      id: anime.id || `rec-${index}`,
-      title: anime.title || 'Unknown Anime',
-      image: imageUrl,
-      genres: anime.genres || ['Animation'],
-      score: anime.score || 7.5,
-      scores: {
-        anilist: anime.score || 7.5,
-        tmdb: anime.score ? (anime.score + (Math.random() * 0.6 - 0.3)) : 7.2 + (Math.random() * 1.5)
-      },
-      externalIds: {
-        tmdb: Math.floor(100000 + Math.random() * 900000), // Mock TMDB ID
-        mal: Math.floor(10000 + Math.random() * 90000)     // Mock MAL ID
-      },
-      synopsis: (anime.synopsis || anime.description || 'No description available.').replace(/<[^>]*>/g, ''),
-      match: anime.matchScore || Math.round(70 + (Math.random() * 25)),
-      reasons: reasons.slice(0, 3),
-      // Use a known trailer if available for this anime
-      trailer: anime.trailer || getTrailerForAnime(anime.id, anime.title)
-    };
+  return {
+    id: anime.id || `rec-${index}`,
+    title: anime.title || 'Unknown Anime',
+    image: imageUrl,
+    genres: anime.genres || ['Animation'],
+    score: anime.score || 7.5,
+    scores: {
+      anilist: anime.score || 7.5,
+      tmdb: anime.score ? (anime.score + (Math.random() * 0.6 - 0.3)) : 7.2 + (Math.random() * 1.5)
+    },
+    externalIds: {
+      tmdb: Math.floor(100000 + Math.random() * 900000), // Mock TMDB ID
+      mal: Math.floor(10000 + Math.random() * 90000)     // Mock MAL ID
+    },
+    synopsis: (anime.synopsis || anime.description || 'No description available.').replace(/<[^>]*>/g, ''),
+    match: anime.matchScore || Math.round(70 + (Math.random() * 25)),
+    reasons: reasons.slice(0, 3),
+    // Use a known trailer if available for this anime
+    trailer: anime.trailer || getTrailerForAnime(anime.id, anime.title)
+  };
   });
 
   // Add mock recommendations if we don't have enough
