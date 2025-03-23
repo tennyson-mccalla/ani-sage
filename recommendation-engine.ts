@@ -304,10 +304,15 @@ export function findRelevantClusters(
   // Generate adjacent clusters for diversity
   const adjacentClusterIds = generateAdjacentClusters(userFeatures);
   
-  // Combine primary, adjacent, and explicitly included clusters
+  // Special handling for emotional valence to address test findings
+  // Add more variety in the emotional dimension since we saw 66% overlap in testing
+  const emotionalVariantClusters = generateEmotionalVariantClusters(userFeatures);
+  
+  // Combine primary, adjacent, emotional variants, and explicitly included clusters
   const candidateClusters = new Set([
     primaryClusterId,
     ...adjacentClusterIds,
+    ...emotionalVariantClusters,
     ...includeClusters
   ]);
   
@@ -317,6 +322,35 @@ export function findRelevantClusters(
   // Filter for clusters that actually exist in our data
   return Array.from(candidateClusters)
     .filter(id => clusters[id] && clusters[id].length > 0);
+}
+
+/**
+ * Generate clusters with greater emotional valence variety to address overlap issue
+ * 
+ * @param features Feature vector to generate emotional variants for
+ * @returns Array of cluster IDs with emotional variants
+ */
+function generateEmotionalVariantClusters(features: AnimeFeatureVector): string[] {
+  // Use the same bucketing logic as in determineClusterId for consistency
+  const visualBucket = Math.floor(features.visualStyle / 2);
+  const narrativeBucket = Math.floor(features.narrativeStyle / 2);
+  const characterBucket = Math.floor(features.characterDepth / 3.33);
+  const pacingBucket = Math.floor(features.pacing / 3.33);
+  
+  // Generate a wider range of emotional variants
+  const emotionalVariants: string[] = [];
+  
+  // Generate all possible emotional buckets to ensure maximum diversity
+  // This helps address the emotional valence overlap issue identified in testing
+  for (let i = 0; i <= 4; i++) { // 0-4 corresponds to both polarities across all intensity levels
+    // Add positive variants
+    emotionalVariants.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-pos${i}-p${pacingBucket}`);
+    
+    // Add negative variants
+    emotionalVariants.push(`${visualBucket}-${narrativeBucket}-${characterBucket}-neg${i}-p${pacingBucket}`);
+  }
+  
+  return emotionalVariants;
 }
 
 /**
@@ -481,51 +515,89 @@ export function diversifyResults(
     clusterGroups[clusterId].push(result);
   });
   
-  // Sort clusters by average score
-  const sortedClusterIds = Object.keys(clusterScores)
-    .sort((a, b) => {
-      const scoreA = clusterScores[a].avgScore || 0;
-      const scoreB = clusterScores[b].avgScore || 0;
-      return scoreB - scoreA;
-    });
-  
-  // First pass - get the highest scoring anime from best clusters
-  for (const clusterId of sortedClusterIds) {
-    if (diverseResults.length >= targetCount) break;
+  // Get emotional valence from each anime's cluster ID
+  const emotionFromCluster = (clusterId: string): { polarity: 'pos' | 'neg', intensity: number } | null => {
+    if (!clusterId) return null;
     
-    if (!usedClusters.has(clusterId) && clusterGroups[clusterId]?.length > 0) {
-      // Sort anime within cluster by score
-      const sortedClusterResults = clusterGroups[clusterId]
-        .sort((a, b) => b.score - a.score);
-      
-      // Take the best anime from this cluster
-      diverseResults.push(sortedClusterResults[0]);
-      usedClusters.add(clusterId);
+    // Extract emotion part from cluster format: "{visual}-{narrative}-{character}-{emotion}-p{pacing}"
+    const parts = clusterId.split('-');
+    if (parts.length !== 5) return null;
+    
+    // The emotion part should be in format "pos0" to "pos4" or "neg0" to "neg4"
+    const emotionPart = parts[3];
+    if (!emotionPart) return null;
+    
+    if (emotionPart.startsWith('pos')) {
+      return { polarity: 'pos', intensity: parseInt(emotionPart.substring(3)) || 0 };
+    } else if (emotionPart.startsWith('neg')) {
+      return { polarity: 'neg', intensity: parseInt(emotionPart.substring(3)) || 0 };
     }
-  }
+    
+    return null;
+  };
+
+  // Split clusters by emotional valence for better emotion diversity
+  const positiveClusters: string[] = [];
+  const negativeClusters: string[] = [];
+  const neutralClusters: string[] = [];
   
-  // Second pass - try to add another anime from the highest scoring clusters
-  // if we still need more recommendations and those clusters have multiple good options
-  if (diverseResults.length < targetCount) {
-    for (const clusterId of sortedClusterIds) {
-      if (diverseResults.length >= targetCount) break;
+  Object.keys(clusterScores).forEach(clusterId => {
+    const emotion = emotionFromCluster(clusterId);
+    if (!emotion) {
+      neutralClusters.push(clusterId);
+    } else if (emotion.polarity === 'pos') {
+      positiveClusters.push(clusterId);
+    } else {
+      negativeClusters.push(clusterId);
+    }
+  });
+
+  // Sort each emotion category by score
+  const sortByScore = (a: string, b: string) => {
+    const scoreA = clusterScores[a].avgScore || 0;
+    const scoreB = clusterScores[b].avgScore || 0;
+    return scoreB - scoreA;
+  };
+  
+  const sortedPositive = positiveClusters.sort(sortByScore);
+  const sortedNegative = negativeClusters.sort(sortByScore);
+  const sortedNeutral = neutralClusters.sort(sortByScore);
+  
+  // Calculate how many from each category based on target count
+  const posCount = Math.min(Math.ceil(targetCount * 0.4), sortedPositive.length);
+  const negCount = Math.min(Math.ceil(targetCount * 0.4), sortedNegative.length);
+  const neutralCount = Math.min(targetCount - posCount - negCount, sortedNeutral.length);
+  
+  // Helper function to get top anime from clusters
+  const getTopAnimeFromClusters = (clusterIds: string[], count: number): {anime: AnimeTitle; score: number}[] => {
+    const results: {anime: AnimeTitle; score: number}[] = [];
+    
+    for (const clusterId of clusterIds) {
+      if (results.length >= count) break;
       
-      if (clusterGroups[clusterId]?.length > 1) {
+      if (!usedClusters.has(clusterId) && clusterGroups[clusterId]?.length > 0) {
         // Sort anime within cluster by score
         const sortedClusterResults = clusterGroups[clusterId]
           .sort((a, b) => b.score - a.score);
         
-        // Take the second best anime only if it's score is still good
-        if (sortedClusterResults[1].score > 0.7) {
-          diverseResults.push(sortedClusterResults[1]);
-        }
-        
-        if (diverseResults.length >= targetCount) break;
+        // Take the best anime from this cluster
+        results.push(sortedClusterResults[0]);
+        usedClusters.add(clusterId);
       }
     }
-  }
+    
+    return results;
+  };
   
-  // Third pass - add remaining high-scoring anime regardless of cluster
+  // Get top anime from each emotional category
+  const positiveResults = getTopAnimeFromClusters(sortedPositive, posCount);
+  const negativeResults = getTopAnimeFromClusters(sortedNegative, negCount);
+  const neutralResults = getTopAnimeFromClusters(sortedNeutral, neutralCount);
+  
+  // Combine all results
+  diverseResults.push(...positiveResults, ...negativeResults, ...neutralResults);
+  
+  // If we still need more recommendations, add from remaining high-scoring anime
   if (diverseResults.length < targetCount) {
     // Get all anime we haven't used yet
     const usedAnimeIds = new Set(diverseResults.map(r => r.anime.id));

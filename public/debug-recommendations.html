@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Recommendation Engine Debug</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .profiles {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .profile {
+      flex: 1;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      min-width: 300px;
+    }
+    .profile h2 {
+      margin-top: 0;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      flex: 2;
+    }
+    .form-group input[type="range"] {
+      flex: 3;
+    }
+    .form-group .value {
+      flex: 1;
+      text-align: right;
+    }
+    button {
+      padding: 10px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+    .json {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      margin: 10px 0;
+      max-height: 400px;
+      overflow: auto;
+    }
+    .results {
+      margin-top: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .anime-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .anime-header {
+      padding: 10px;
+      background: #f0f9ff;
+      border-bottom: 1px solid #ddd;
+    }
+    .anime-title {
+      font-weight: bold;
+      margin: 0;
+    }
+    .anime-match {
+      color: #6366f1;
+      font-weight: bold;
+    }
+    .anime-body {
+      padding: 10px;
+    }
+    .dimension-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .dimension-name {
+      flex: 2;
+    }
+    .dimension-values {
+      flex: 3;
+      display: flex;
+      justify-content: space-between;
+    }
+    .dimension-score {
+      flex: 1;
+      text-align: right;
+      font-weight: bold;
+    }
+    .score-bar {
+      height: 8px;
+      background: #ddd;
+      border-radius: 4px;
+      margin-top: 3px;
+      position: relative;
+    }
+    .score-fill {
+      height: 100%;
+      background: #6366f1;
+      border-radius: 4px;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .preset-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .preset-button {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      min-width: 120px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Recommendation Engine Debug Tool</h1>
+  <p>Create different psychological profiles and see how they affect anime match scores</p>
+  
+  <div class="profiles">
+    <div class="profile">
+      <h2>User Psychological Profile</h2>
+      <div id="profileForm">
+        <div class="form-group">
+          <label for="visualComplexity">Visual Complexity:</label>
+          <input type="range" id="visualComplexity" name="visualComplexity" min="1" max="10" step="0.5" value="5">
+          <span class="value" id="visualComplexityValue">5.0</span>
+        </div>
+        <div class="form-group">
+          <label for="narrativeComplexity">Narrative Complexity:</label>
+          <input type="range" id="narrativeComplexity" name="narrativeComplexity" min="1" max="10" step="0.5" value="5">
+          <span class="value" id="narrativeComplexityValue">5.0</span>
+        </div>
+        <div class="form-group">
+          <label for="emotionalIntensity">Emotional Intensity:</label>
+          <input type="range" id="emotionalIntensity" name="emotionalIntensity" min="1" max="10" step="0.5" value="5">
+          <span class="value" id="emotionalIntensityValue">5.0</span>
+        </div>
+        <div class="form-group">
+          <label for="characterComplexity">Character Complexity:</label>
+          <input type="range" id="characterComplexity" name="characterComplexity" min="1" max="10" step="0.5" value="5">
+          <span class="value" id="characterComplexityValue">5.0</span>
+        </div>
+        <div class="form-group">
+          <label for="moralAmbiguity">Moral Ambiguity:</label>
+          <input type="range" id="moralAmbiguity" name="moralAmbiguity" min="1" max="10" step="0.5" value="5">
+          <span class="value" id="moralAmbiguityValue">5.0</span>
+        </div>
+        
+        <div class="preset-buttons">
+          <button class="preset-button" onclick="setSimpleProfile()">Simple & Light</button>
+          <button class="preset-button" onclick="setComplexProfile()">Complex & Intense</button>
+          <button class="preset-button" onclick="setBalancedProfile()">Balanced</button>
+        </div>
+        
+        <button onclick="calculateMatches()">Calculate Matches</button>
+      </div>
+    </div>
+    
+    <div class="profile">
+      <h2>Active Session Profile</h2>
+      <div id="sessionForm">
+        <div id="sessionProfile">
+          <p>No active session found.</p>
+          <button onclick="loadSessionProfile()">Load Current Session Profile</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="results">
+    <h2>Match Results</h2>
+    <div class="grid" id="results">
+      <!-- Results will be inserted here -->
+      <div style="grid-column: span 3">
+        <p>Adjust the profile values and click "Calculate Matches" to see how different psychological profiles affect recommendations.</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Set up range input listeners
+    document.querySelectorAll('input[type="range"]').forEach(input => {
+      const valueDisplay = document.getElementById(`${input.id}Value`);
+      input.addEventListener('input', () => {
+        valueDisplay.textContent = parseFloat(input.value).toFixed(1);
+      });
+    });
+    
+    // Preset profiles
+    function setSimpleProfile() {
+      document.getElementById('visualComplexity').value = "3.0";
+      document.getElementById('narrativeComplexity').value = "2.5";
+      document.getElementById('emotionalIntensity').value = "3.5";
+      document.getElementById('characterComplexity').value = "3.0";
+      document.getElementById('moralAmbiguity').value = "2.0";
+      
+      // Update displayed values
+      document.getElementById('visualComplexityValue').textContent = "3.0";
+      document.getElementById('narrativeComplexityValue').textContent = "2.5";
+      document.getElementById('emotionalIntensityValue').textContent = "3.5";
+      document.getElementById('characterComplexityValue').textContent = "3.0";
+      document.getElementById('moralAmbiguityValue').textContent = "2.0";
+    }
+    
+    function setComplexProfile() {
+      document.getElementById('visualComplexity').value = "8.5";
+      document.getElementById('narrativeComplexity').value = "9.0";
+      document.getElementById('emotionalIntensity').value = "8.5";
+      document.getElementById('characterComplexity').value = "9.0";
+      document.getElementById('moralAmbiguity').value = "7.5";
+      
+      // Update displayed values
+      document.getElementById('visualComplexityValue').textContent = "8.5";
+      document.getElementById('narrativeComplexityValue').textContent = "9.0";
+      document.getElementById('emotionalIntensityValue').textContent = "8.5";
+      document.getElementById('characterComplexityValue').textContent = "9.0";
+      document.getElementById('moralAmbiguityValue').textContent = "7.5";
+    }
+    
+    function setBalancedProfile() {
+      document.getElementById('visualComplexity').value = "5.5";
+      document.getElementById('narrativeComplexity').value = "5.5";
+      document.getElementById('emotionalIntensity').value = "5.5";
+      document.getElementById('characterComplexity').value = "5.5";
+      document.getElementById('moralAmbiguity').value = "5.5";
+      
+      // Update displayed values
+      document.getElementById('visualComplexityValue').textContent = "5.5";
+      document.getElementById('narrativeComplexityValue').textContent = "5.5";
+      document.getElementById('emotionalIntensityValue').textContent = "5.5";
+      document.getElementById('characterComplexityValue').textContent = "5.5";
+      document.getElementById('moralAmbiguityValue').textContent = "5.5";
+    }
+    
+    // Load active session profile from current browser session
+    async function loadSessionProfile() {
+      const sessionId = localStorage.getItem('sessionId');
+      
+      if (!sessionId) {
+        document.getElementById('sessionProfile').innerHTML = `
+          <p>No active session found in localStorage.</p>
+          <p>Try navigating to the main app and answering some questions first.</p>
+        `;
+        return;
+      }
+      
+      try {
+        document.getElementById('sessionProfile').innerHTML = `<p>Loading session ${sessionId.substring(0, 8)}...</p>`;
+        
+        // Fetch the debug API with sessionId
+        const response = await fetch(`/api/v1/debug/recommendations?sessionId=${sessionId}`);
+        const data = await response.json();
+        
+        if (!data.profile) {
+          document.getElementById('sessionProfile').innerHTML = `
+            <p>No profile found for session ${sessionId.substring(0, 8)}.</p>
+            <button onclick="loadSessionProfile()">Try Again</button>
+          `;
+          return;
+        }
+        
+        // Show the profile data
+        document.getElementById('sessionProfile').innerHTML = `
+          <div class="form-group">
+            <label>Visual Complexity:</label>
+            <input type="range" disabled value="${data.profile.dimensions.visualComplexity || 5}">
+            <span class="value">${(data.profile.dimensions.visualComplexity || 5).toFixed(1)}</span>
+          </div>
+          <div class="form-group">
+            <label>Narrative Complexity:</label>
+            <input type="range" disabled value="${data.profile.dimensions.narrativeComplexity || 5}">
+            <span class="value">${(data.profile.dimensions.narrativeComplexity || 5).toFixed(1)}</span>
+          </div>
+          <div class="form-group">
+            <label>Emotional Intensity:</label>
+            <input type="range" disabled value="${data.profile.dimensions.emotionalIntensity || 5}">
+            <span class="value">${(data.profile.dimensions.emotionalIntensity || 5).toFixed(1)}</span>
+          </div>
+          <div class="form-group">
+            <label>Character Complexity:</label>
+            <input type="range" disabled value="${data.profile.dimensions.characterComplexity || 5}">
+            <span class="value">${(data.profile.dimensions.characterComplexity || 5).toFixed(1)}</span>
+          </div>
+          <div class="form-group">
+            <label>Moral Ambiguity:</label>
+            <input type="range" disabled value="${data.profile.dimensions.moralAmbiguity || 5}">
+            <span class="value">${(data.profile.dimensions.moralAmbiguity || 5).toFixed(1)}</span>
+          </div>
+          <p>Session ID: ${sessionId.substring(0, 8)}...</p>
+          <button onclick="useCurrentProfileValues()">Use These Values</button>
+        `;
+      } catch (error) {
+        console.error('Error loading session profile:', error);
+        document.getElementById('sessionProfile').innerHTML = `
+          <p>Error loading profile: ${error.message}</p>
+          <button onclick="loadSessionProfile()">Try Again</button>
+        `;
+      }
+    }
+    
+    // Copy values from session profile to editable profile
+    function useCurrentProfileValues() {
+      const sessionForm = document.getElementById('sessionForm');
+      const visualComplexity = parseFloat(sessionForm.querySelector('input[disabled]').value);
+      const narrativeComplexity = parseFloat(sessionForm.querySelectorAll('input[disabled]')[1].value);
+      const emotionalIntensity = parseFloat(sessionForm.querySelectorAll('input[disabled]')[2].value);
+      const characterComplexity = parseFloat(sessionForm.querySelectorAll('input[disabled]')[3].value);
+      const moralAmbiguity = parseFloat(sessionForm.querySelectorAll('input[disabled]')[4].value);
+      
+      document.getElementById('visualComplexity').value = visualComplexity;
+      document.getElementById('narrativeComplexity').value = narrativeComplexity;
+      document.getElementById('emotionalIntensity').value = emotionalIntensity;
+      document.getElementById('characterComplexity').value = characterComplexity;
+      document.getElementById('moralAmbiguity').value = moralAmbiguity;
+      
+      document.getElementById('visualComplexityValue').textContent = visualComplexity.toFixed(1);
+      document.getElementById('narrativeComplexityValue').textContent = narrativeComplexity.toFixed(1);
+      document.getElementById('emotionalIntensityValue').textContent = emotionalIntensity.toFixed(1);
+      document.getElementById('characterComplexityValue').textContent = characterComplexity.toFixed(1);
+      document.getElementById('moralAmbiguityValue').textContent = moralAmbiguity.toFixed(1);
+    }
+    
+    // Main function to calculate matches
+    async function calculateMatches() {
+      try {
+        document.getElementById('results').innerHTML = '<p>Calculating matches...</p>';
+        
+        // Get profile values
+        const profile = {
+          dimensions: {
+            visualComplexity: parseFloat(document.getElementById('visualComplexity').value),
+            narrativeComplexity: parseFloat(document.getElementById('narrativeComplexity').value),
+            emotionalIntensity: parseFloat(document.getElementById('emotionalIntensity').value),
+            characterComplexity: parseFloat(document.getElementById('characterComplexity').value),
+            moralAmbiguity: parseFloat(document.getElementById('moralAmbiguity').value)
+          }
+        };
+        
+        // Create a session with these values
+        const sessionId = 'debug-' + Math.random().toString(36).substring(2, 15);
+        
+        // Save profile object to local storage for debug API
+        localStorage.setItem('debugProfile', JSON.stringify(profile));
+        
+        // Fetch the debug API directly with animeId parameter
+        const animeIds = ["5114", "16498", "1535", "11", "5"];
+        const results = await Promise.all(animeIds.map(async (id) => {
+          const response = await fetch(`/api/v1/debug/recommendations?animeId=${id}`);
+          return response.json();
+        }));
+        
+        // Process the results
+        const animeData = results.map(result => {
+          if (result.animeTraits && result.animeTraits.length > 0) {
+            const anime = result.animeTraits[0];
+            
+            // Calculate match score locally
+            const dimensions = [
+              'visualComplexity', 
+              'narrativeComplexity', 
+              'emotionalIntensity',
+              'characterComplexity',
+              'moralAmbiguity'
+            ];
+            
+            const dimensionWeights = {
+              'visualComplexity': 0.8,
+              'narrativeComplexity': 1.0,
+              'emotionalIntensity': 0.9,
+              'characterComplexity': 1.0,
+              'moralAmbiguity': 0.7
+            };
+            
+            let weightedDistanceSum = 0;
+            let totalWeight = 0;
+            const dimensionScores = {};
+            
+            dimensions.forEach(dim => {
+              if (profile.dimensions[dim] !== undefined && anime.traits[dim] !== undefined) {
+                const profileValue = profile.dimensions[dim];
+                const animeValue = anime.traits[dim];
+                
+                const distance = Math.pow(Math.abs(profileValue - animeValue), 2) / 100;
+                const weight = dimensionWeights[dim] || 1.0;
+                
+                weightedDistanceSum += distance * weight;
+                totalWeight += weight;
+                
+                const dimScore = 100 - (distance * 100);
+                
+                dimensionScores[dim] = {
+                  profileValue,
+                  animeValue,
+                  distance: Math.abs(profileValue - animeValue),
+                  weight,
+                  score: dimScore
+                };
+              }
+            });
+            
+            const avgWeightedDistance = totalWeight > 0 ? weightedDistanceSum / totalWeight : 0.5;
+            const matchScore = Math.max(0, Math.min(100, 100 - (avgWeightedDistance * 100)));
+            
+            return {
+              id: anime.id,
+              title: anime.title,
+              traits: anime.traits,
+              matchScore: Math.round(matchScore),
+              dimensionScores
+            };
+          }
+          return null;
+        }).filter(anime => anime !== null);
+        
+        // Sort by match score
+        animeData.sort((a, b) => b.matchScore - a.matchScore);
+        
+        // Render results
+        renderResults(animeData);
+      } catch (error) {
+        console.error('Error calculating matches:', error);
+        document.getElementById('results').innerHTML = `
+          <p>Error calculating matches: ${error.message}</p>
+          <button onclick="calculateMatches()">Try Again</button>
+        `;
+      }
+    }
+    
+    // Render the results
+    function renderResults(animeList) {
+      const resultsContainer = document.getElementById('results');
+      
+      if (!animeList || animeList.length === 0) {
+        resultsContainer.innerHTML = '<p>No matches found.</p>';
+        return;
+      }
+      
+      let html = '';
+      
+      animeList.forEach(anime => {
+        html += `
+          <div class="anime-card">
+            <div class="anime-header">
+              <h3 class="anime-title">${anime.title}</h3>
+              <div class="anime-match">${anime.matchScore}% Match</div>
+            </div>
+            <div class="anime-body">
+              <div class="score-breakdown">
+        `;
+        
+        // Add dimension breakdown
+        const dimensions = [
+          'visualComplexity', 
+          'narrativeComplexity', 
+          'emotionalIntensity',
+          'characterComplexity',
+          'moralAmbiguity'
+        ];
+        
+        const dimensionLabels = {
+          'visualComplexity': 'Visual',
+          'narrativeComplexity': 'Narrative', 
+          'emotionalIntensity': 'Emotional',
+          'characterComplexity': 'Character',
+          'moralAmbiguity': 'Moral'
+        };
+        
+        dimensions.forEach(dim => {
+          const score = anime.dimensionScores[dim];
+          if (score) {
+            html += `
+              <div class="dimension-row">
+                <span class="dimension-name">${dimensionLabels[dim]}:</span>
+                <span class="dimension-values">
+                  ${score.profileValue.toFixed(1)} → ${score.animeValue.toFixed(1)}
+                  <span class="dimension-score">${Math.round(score.score)}%</span>
+                </span>
+              </div>
+              <div class="score-bar">
+                <div class="score-fill" style="width: ${score.score}%"></div>
+              </div>
+            `;
+          }
+        });
+        
+        html += `
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      resultsContainer.innerHTML = html;
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check for localStorage sessionId
+      if (localStorage.getItem('sessionId')) {
+        loadSessionProfile();
+      }
+    });
+  </script>
+</body>
+</html>

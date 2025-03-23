@@ -51,7 +51,7 @@ export const PsychologicalDimensions: DimensionSet = {
     min: -5, // Negative emotional tone (sad, tense)
     max: 5,  // Positive emotional tone (uplifting, joyful)
     description: "Preference for positive vs. negative emotional experiences",
-    importance: 0.75
+    importance: 0.9  // Increased importance based on test results showing this dimension needs more weight
   },
   
   conflictResolution: {
