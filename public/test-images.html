@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .image-card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            width: 300px;
+        }
+        .image-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .image-info {
+            margin-top: 10px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Anime Image Test Page</h1>
+    <p>This page displays test images from various sources to verify they load correctly.</p>
+    
+    <h2>TMDb Images</h2>
+    <div class="image-container">
+        <div class="image-card">
+            <img src="https://image.tmdb.org/t/p/original/5ZFUEOULaVml7pQuXxhpR2SmVUw.jpg" alt="Fullmetal Alchemist: Brotherhood">
+            <div class="image-info">
+                <h3>Fullmetal Alchemist: Brotherhood</h3>
+                <p>TMDb ID: 31911</p>
+                <p>Path: /5ZFUEOULaVml7pQuXxhpR2SmVUw.jpg</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://image.tmdb.org/t/p/original/6iysgZr6Upm5RlAlVFo5f4D9euu.jpg" alt="Steins;Gate">
+            <div class="image-info">
+                <h3>Steins;Gate</h3>
+                <p>TMDb ID: 42509</p>
+                <p>Path: /6iysgZr6Upm5RlAlVFo5f4D9euu.jpg</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://image.tmdb.org/t/p/original/hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg" alt="Attack on Titan">
+            <div class="image-info">
+                <h3>Attack on Titan</h3>
+                <p>TMDb ID: 1429</p>
+                <p>Path: /hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg</p>
+            </div>
+        </div>
+    </div>
+    
+    <h2>MyAnimeList Images</h2>
+    <div class="image-container">
+        <div class="image-card">
+            <img src="https://cdn.myanimelist.net/images/anime/1223/96541l.jpg" alt="Fullmetal Alchemist: Brotherhood">
+            <div class="image-info">
+                <h3>Fullmetal Alchemist: Brotherhood</h3>
+                <p>MAL ID: 5114</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://cdn.myanimelist.net/images/anime/5/73199l.jpg" alt="Steins;Gate">
+            <div class="image-info">
+                <h3>Steins;Gate</h3>
+                <p>MAL ID: 9253</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://cdn.myanimelist.net/images/anime/10/47347l.jpg" alt="Attack on Titan">
+            <div class="image-info">
+                <h3>Attack on Titan</h3>
+                <p>MAL ID: 16498</p>
+            </div>
+        </div>
+    </div>
+    
+    <h2>Placeholder Images</h2>
+    <div class="image-container">
+        <div class="image-card">
+            <img src="https://dummyimage.com/600x900/3498db/ffffff&text=Anime+1" alt="Placeholder 1">
+            <div class="image-info">
+                <h3>Placeholder 1</h3>
+                <p>Blue Background</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://dummyimage.com/600x900/e74c3c/ffffff&text=Anime+2" alt="Placeholder 2">
+            <div class="image-info">
+                <h3>Placeholder 2</h3>
+                <p>Red Background</p>
+            </div>
+        </div>
+        <div class="image-card">
+            <img src="https://dummyimage.com/600x900/27ae60/ffffff&text=Anime+3" alt="Placeholder 3">
+            <div class="image-info">
+                <h3>Placeholder 3</h3>
+                <p>Green Background</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

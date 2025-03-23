@@ -1,4 +1,4 @@
-// Simple recommendations API endpoint that returns mock data with trailers
+// Recommendations API endpoint that returns mock data with trailers
 
 export default function handler(req, res) {
   // Get session ID from query params
