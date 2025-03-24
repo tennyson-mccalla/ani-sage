@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
-import { corsHeaders } from '@/app/lib/utils';
+import { corsHeaders, ensureSessionProfile } from '@/app/lib/utils';
 
 // Set dynamic runtime to handle URL search parameters
 export const dynamic = 'force-dynamic';
@@ -22,76 +22,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       });
     }
 
-    // Check if the session exists using our database interface
-    const session = await db.getSession(sessionId);
-    console.log("Session lookup result:", session);
+    // Make sure we have a session and profile
+    const session = await ensureSessionProfile(sessionId);
+    console.log("Session lookup/creation result:", session);
     
     if (!session) {
-      console.log("Session not found for ID:", sessionId);
-      
-      // For debug only: If it's a mock session ID, create a fake profile
-      if (sessionId.startsWith('mock-')) {
-        console.log("Creating fake profile for mock session");
-        const mockProfileId = "mock-profile-1";
-        
-        // Create a fake session and profile
-        const mockSession = {
-          id: sessionId,
-          profileId: mockProfileId,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        // We need to use the db interface instead of directly accessing inMemoryDb
-        await db.createSession({
-          profileId: mockProfileId,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        
-        // Create a mock profile
-        const mockProfile = {
-          id: mockProfileId,
-          dimensions: {
-            'visualComplexity': 7.5,
-            'narrativeComplexity': 8.2,
-            'emotionalIntensity': 6.8,
-            'characterComplexity': 8.5,
-            'moralAmbiguity': 7.9
-          },
-          confidences: {},
-          answeredQuestions: [],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        await db.createProfile(mockProfile);
-        
-        // Convert dimensions for response
-        const dimensionsArray = Object.entries(mockProfile.dimensions).map(([name, value]) => ({
-          name,
-          value,
-          min: 1,
-          max: 10,
-          lowLabel: `Low ${name}`,
-          highLabel: `High ${name}`
-        }));
-        
-        return NextResponse.json({
-          profile: {
-            dimensions: dimensionsArray,
-            confidences: {},
-            answeredQuestions: [],
-            suggestedAdjustments: []
-          }
-        }, { headers: corsHeaders() });
-      }
-      
+      console.error("Failed to create session for ID:", sessionId);
       return NextResponse.json({
-        error: 'not_found',
-        message: 'Session not found'
+        error: 'server_error',
+        message: 'Failed to create session'
       }, {
-        status: 404,
+        status: 500,
         headers: corsHeaders()
       });
     }

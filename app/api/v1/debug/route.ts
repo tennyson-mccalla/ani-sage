@@ -1,79 +1,41 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/app/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
 import { corsHeaders } from '@/app/lib/utils';
+import { manualMappings } from '@/app/lib/utils/malsync/manual-mappings';
 
-export async function GET(): Promise<Response> {
-  console.log("GET /api/v1/debug called");
-  
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest): Promise<Response> {
   try {
-    // Import the debug helper to get raw storage state
-    const { dumpStorage } = await import('@/app/lib/db');
-    console.log("Debug endpoint: Raw storage state:", dumpStorage());
+    console.log("Debug API called");
     
-    // Parse the sessions and profiles from the database
-    let sessions = [];
-    let profiles = [];
+    // Return environment variables (safe ones for debugging)
+    const envData = {
+      NEXT_PUBLIC_USE_REAL_API: process.env.NEXT_PUBLIC_USE_REAL_API,
+      DEBUG_RECOMMENDATIONS: process.env.DEBUG_RECOMMENDATIONS,
+      FORCE_REAL_API: process.env.FORCE_REAL_API,
+    };
     
-    try {
-      // Use the db interface directly to test if it's working
-      const sessionItems = await Promise.all(
-        Array.from({ length: 20 }, (_, i) => 
-          db.getSession(`test-id-${i}`).catch(() => null)
-        )
-      );
-      
-      // Extract data from localStorage
-      const rawStorage = JSON.parse(dumpStorage());
-      
-      if (rawStorage.sessions) {
-        try {
-          const parsedSessions = JSON.parse(rawStorage.sessions);
-          sessions = parsedSessions.map(([id, session]: [string, any]) => ({
-            id,
-            profileId: session.profileId,
-            createdAt: session.createdAt,
-            updatedAt: session.updatedAt
-          }));
-        } catch (error) {
-          console.error("Error parsing sessions:", error);
-        }
-      }
-      
-      if (rawStorage.profiles) {
-        try {
-          const parsedProfiles = JSON.parse(rawStorage.profiles);
-          profiles = parsedProfiles.map(([id, profile]: [string, any]) => ({
-            id,
-            dimensions: Object.keys(profile.dimensions || {}).length,
-            answeredQuestions: profile.answeredQuestions?.length || 0,
-            createdAt: profile.createdAt,
-            updatedAt: profile.updatedAt
-          }));
-        } catch (error) {
-          console.error("Error parsing profiles:", error);
-        }
-      }
-    } catch (error) {
-      console.error("Debug endpoint error:", error);
-    }
+    console.log("Environment variables:", JSON.stringify(envData));
+    
+    // Count manual mappings with image URLs
+    const mappingsWithImages = Object.values(manualMappings).filter(m => m.imageUrl);
+    console.log(`Manual mappings with images: ${mappingsWithImages.length}/${Object.keys(manualMappings).length}`);
     
     return NextResponse.json({
-      status: 'ok',
-      database: {
-        sessions,
-        profiles,
-        sessionCount: sessions.length,
-        profileCount: profiles.length
-      },
-      timestamp: new Date().toISOString()
+      success: true,
+      env: envData,
+      serverTime: new Date().toISOString(),
+      manualMappingsCount: Object.keys(manualMappings).length,
+      manualMappingsWithImages: mappingsWithImages.length,
+      nodeEnv: process.env.NODE_ENV
     }, { headers: corsHeaders() });
   } catch (error) {
-    console.error('Error in debug endpoint:', error);
+    console.error('Error in debug API:', error);
     return NextResponse.json({
-      status: 'error',
-      message: String(error),
-      timestamp: new Date().toISOString()
-    }, { 
+      error: 'server_error',
+      message: 'Error in debug endpoint',
+      details: String(error)
+    }, {
       status: 500,
       headers: corsHeaders()
     });

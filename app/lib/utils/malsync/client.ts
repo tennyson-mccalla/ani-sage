@@ -1,11 +1,11 @@
 /**
- * MALSync API Client
+ * Cross-platform ID Mapping Client
  * 
- * This module provides integration with MALSync's API to get cross-platform mappings
- * between different anime sources like AniList, MyAnimeList, and TMDB.
- * It falls back to manual mappings when the API fails.
+ * This module provides ID mappings between different anime platforms
+ * using an internal database of manual mappings.
  * 
- * API Documentation: https://api.malsync.moe/
+ * Previously integrated with MALSync API, but it has been removed due to
+ * consistent 404 errors. Now using only manual mappings.
  */
 
 import { BaseAPIClient } from '../../core/client';
@@ -41,14 +41,10 @@ export interface MalSyncMapping {
  * MALSync API Client for cross-platform anime ID mappings
  */
 export class MalSyncClient {
-  private readonly baseUrl = 'https://api.malsync.moe';
   private cache: Record<string, MalSyncMapping> = {};
-  private useManualMappings: boolean = true;
-  private useApiForManualMappings: boolean = false;
-
-  constructor(options?: { useManualMappings?: boolean, useApiForManualMappings?: boolean }) {
-    this.useManualMappings = options?.useManualMappings !== false;
-    this.useApiForManualMappings = options?.useApiForManualMappings === true;
+  
+  constructor() {
+    // No configuration needed since we only use manual mappings
   }
 
   /**
@@ -76,7 +72,7 @@ export class MalSyncClient {
    * Get mappings for an AniList anime ID
    * 
    * @param anilistId AniList anime ID
-   * @returns Promise with the MALSync mapping data
+   * @returns Promise with the mapping data from manual database
    */
   public async getAnilistMapping(anilistId: string | number): Promise<MalSyncMapping | null> {
     const cacheKey = `anilist-${anilistId}`;
@@ -86,8 +82,8 @@ export class MalSyncClient {
       return this.cache[cacheKey];
     }
     
-    // Check if we have a manual mapping and should use it immediately
-    if (this.useManualMappings && hasManualMapping(anilistId) && !this.useApiForManualMappings) {
+    // Check if we have a manual mapping
+    if (hasManualMapping(anilistId)) {
       const manualMapping = getFullMapping(anilistId);
       if (manualMapping) {
         const mapping = this.convertManualMappingToMalSync(manualMapping);
@@ -95,53 +91,16 @@ export class MalSyncClient {
         return mapping;
       }
     }
-
-    try {
-      const response = await fetch(`${this.baseUrl}/anilist/anime/${anilistId}`);
-      
-      if (!response.ok) {
-        console.warn(`Failed to get MALSync mapping for AniList ID ${anilistId}: ${response.status}`);
-        
-        // Fall back to manual mapping if API fails
-        if (this.useManualMappings && hasManualMapping(anilistId)) {
-          console.log(`Using manual mapping for AniList ID ${anilistId}`);
-          const manualMapping = getFullMapping(anilistId);
-          if (manualMapping) {
-            const mapping = this.convertManualMappingToMalSync(manualMapping);
-            this.cache[cacheKey] = mapping;
-            return mapping;
-          }
-        }
-        
-        return null;
-      }
-      
-      const data = await response.json() as MalSyncMapping;
-      this.cache[cacheKey] = data;
-      return data;
-    } catch (error) {
-      console.error(`Error fetching MALSync mapping for AniList ID ${anilistId}:`, error);
-      
-      // Fall back to manual mapping on error
-      if (this.useManualMappings && hasManualMapping(anilistId)) {
-        console.log(`Using manual mapping for AniList ID ${anilistId} after API error`);
-        const manualMapping = getFullMapping(anilistId);
-        if (manualMapping) {
-          const mapping = this.convertManualMappingToMalSync(manualMapping);
-          this.cache[cacheKey] = mapping;
-          return mapping;
-        }
-      }
-      
-      return null;
-    }
+    
+    // No mapping found in manual database
+    return null;
   }
   
   /**
    * Get mappings for a MyAnimeList anime ID
    * 
    * @param malId MyAnimeList anime ID
-   * @returns Promise with the MALSync mapping data
+   * @returns Promise with the mapping data - only returns from matching manual mappings
    */
   public async getMalMapping(malId: string | number): Promise<MalSyncMapping | null> {
     const cacheKey = `mal-${malId}`;
@@ -151,21 +110,18 @@ export class MalSyncClient {
       return this.cache[cacheKey];
     }
     
-    try {
-      const response = await fetch(`${this.baseUrl}/mal/anime/${malId}`);
-      
-      if (!response.ok) {
-        console.warn(`Failed to get MALSync mapping for MAL ID ${malId}: ${response.status}`);
-        return null;
+    // Search through manual mappings for matching MAL ID
+    for (const key in manualMappings) {
+      const mapping = manualMappings[key];
+      if (mapping.mal === Number(malId)) {
+        const result = this.convertManualMappingToMalSync(mapping);
+        this.cache[cacheKey] = result;
+        return result;
       }
-      
-      const data = await response.json() as MalSyncMapping;
-      this.cache[cacheKey] = data;
-      return data;
-    } catch (error) {
-      console.error(`Error fetching MALSync mapping for MAL ID ${malId}:`, error);
-      return null;
     }
+    
+    // No mapping found in manual database
+    return null;
   }
   
   /**
@@ -175,32 +131,15 @@ export class MalSyncClient {
    * @returns The TMDB ID if found, null otherwise
    */
   public async getTmdbIdFromAnilist(anilistId: string | number): Promise<number | null> {
-    // Fast path: Check manual mappings directly
-    if (this.useManualMappings && !this.useApiForManualMappings) {
-      const manualTmdbId = getTmdbIdFromManualMapping(anilistId);
-      if (manualTmdbId) {
-        console.log(`Found TMDB ID ${manualTmdbId} for AniList ID ${anilistId} in manual mappings`);
-        return manualTmdbId;
-      }
+    // Check manual mappings directly
+    const manualTmdbId = getTmdbIdFromManualMapping(anilistId);
+    if (manualTmdbId) {
+      console.log(`Found TMDB ID ${manualTmdbId} for AniList ID ${anilistId} in manual mappings`);
+      return manualTmdbId;
     }
     
-    // Try API
-    const mapping = await this.getAnilistMapping(anilistId);
-    
-    if (!mapping) {
-      // Last resort: check manual mappings
-      if (this.useManualMappings) {
-        const manualTmdbId = getTmdbIdFromManualMapping(anilistId);
-        if (manualTmdbId) {
-          console.log(`Found TMDB ID ${manualTmdbId} for AniList ID ${anilistId} in manual mappings (after API failure)`);
-          return manualTmdbId;
-        }
-      }
-      return null;
-    }
-    
-    // MALSync often has TMDB IDs via Simkl
-    return mapping.tmdb_id || null;
+    // No TMDB ID found
+    return null;
   }
 
   /**
@@ -210,30 +149,15 @@ export class MalSyncClient {
    * @returns The MAL ID if found, null otherwise
    */
   public async getMalIdFromAnilist(anilistId: string | number): Promise<number | null> {
-    // Fast path: Check manual mappings directly
-    if (this.useManualMappings && !this.useApiForManualMappings) {
-      const manualMalId = getMalIdFromManualMapping(anilistId);
-      if (manualMalId) {
-        console.log(`Found MAL ID ${manualMalId} for AniList ID ${anilistId} in manual mappings`);
-        return manualMalId;
-      }
+    // Check manual mappings directly
+    const manualMalId = getMalIdFromManualMapping(anilistId);
+    if (manualMalId) {
+      console.log(`Found MAL ID ${manualMalId} for AniList ID ${anilistId} in manual mappings`);
+      return manualMalId;
     }
     
-    const mapping = await this.getAnilistMapping(anilistId);
-    
-    if (!mapping) {
-      // Last resort: check manual mappings
-      if (this.useManualMappings) {
-        const manualMalId = getMalIdFromManualMapping(anilistId);
-        if (manualMalId) {
-          console.log(`Found MAL ID ${manualMalId} for AniList ID ${anilistId} in manual mappings (after API failure)`);
-          return manualMalId;
-        }
-      }
-      return null;
-    }
-    
-    return mapping.malId || null;
+    // No MAL ID found
+    return null;
   }
   
   /**
@@ -243,11 +167,15 @@ export class MalSyncClient {
    * @returns The AniList ID if found, null otherwise
    */
   public async getAnilistIdFromMal(malId: string | number): Promise<number | null> {
-    const mapping = await this.getMalMapping(malId);
+    // Search through manual mappings
+    for (const key in manualMappings) {
+      const mapping = manualMappings[key];
+      if (mapping.mal === Number(malId)) {
+        return mapping.anilist;
+      }
+    }
     
-    if (!mapping) return null;
-    
-    return mapping.anilist_id || null;
+    return null;
   }
   
   /**
@@ -261,7 +189,4 @@ export class MalSyncClient {
   }
 }
 
-export default new MalSyncClient({
-  useManualMappings: true,
-  useApiForManualMappings: false
-});
+export default new MalSyncClient();
