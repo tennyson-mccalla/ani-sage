@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Debug Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .endpoints {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .endpoint {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .sessions-container {
+            margin-top: 20px;
+        }
+        .no-sessions {
+            font-style: italic;
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ani-Sage API Debug Tool</h1>
+    <p>This page helps test and debug the API endpoints used by the Ani-Sage recommendation system.</p>
+    
+    <div class="card">
+        <h2>Environment Information</h2>
+        <div id="environment-info">Loading...</div>
+        <button onclick="fetchEnvironmentInfo()">Refresh Environment Info</button>
+    </div>
+    
+    <h2>API Endpoints</h2>
+    <div class="endpoints">
+        <div class="endpoint">
+            <h3>Session API</h3>
+            <button onclick="createSession()">Create New Session</button>
+            <div id="session-result" class="result" style="display: none;"></div>
+            
+            <h4>Active Sessions</h4>
+            <div class="sessions-container">
+                <div id="sessions-list" class="no-sessions">No sessions loaded</div>
+            </div>
+            <button onclick="loadStoredSessions()">Load Stored Sessions</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>Profile API</h3>
+            <div>
+                <label for="profile-session-id">Session ID:</label>
+                <input type="text" id="profile-session-id" placeholder="Session ID" style="width: 100%; margin-top: 5px;">
+            </div>
+            <button onclick="getProfile()">Get Profile</button>
+            <button onclick="updateProfile()">Update Mock Profile</button>
+            <div id="profile-result" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="endpoint">
+            <h3>Recommendations API</h3>
+            <div>
+                <label for="recommendations-session-id">Session ID:</label>
+                <input type="text" id="recommendations-session-id" placeholder="Session ID" style="width: 100%; margin-top: 5px;">
+            </div>
+            <button onclick="getRecommendations()">Get Recommendations</button>
+            <div id="recommendations-result" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="endpoint">
+            <h3>Debug API</h3>
+            <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+            <div id="debug-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Helper function to show results
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isError ? 'result error' : 'result success';
+            
+            // Format JSON data nicely
+            if (typeof data === 'object') {
+                element.textContent = JSON.stringify(data, null, 2);
+            } else {
+                element.textContent = data;
+            }
+        }
+        
+        // Helper function to handle API errors
+        function handleApiError(elementId, error) {
+            console.error('API Error:', error);
+            showResult(elementId, `Error: ${error.message}`, true);
+        }
+        
+        // Function to fetch environment information
+        async function fetchEnvironmentInfo() {
+            try {
+                const response = await fetch('/api/v1/debug');
+                const data = await response.json();
+                
+                const envInfoElement = document.getElementById('environment-info');
+                envInfoElement.innerHTML = `
+                    <p><strong>Environment:</strong> ${data.environment}</p>
+                    <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+                    <p><strong>API Version:</strong> ${data.apiVersion || 'v1'}</p>
+                    <p><strong>V1 API Available:</strong> ${data.v1ApiAvailable ? 'Yes' : 'No'}</p>
+                `;
+                
+                // Show all data in the result element
+                showResult('debug-result', data);
+            } catch (error) {
+                handleApiError('debug-result', error);
+            }
+        }
+        
+        // Function to create a new session
+        async function createSession() {
+            try {
+                const response = await fetch('/api/v1/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                showResult('session-result', data);
+                
+                // Save session to localStorage
+                const sessions = JSON.parse(localStorage.getItem('debug_sessions') || '[]');
+                sessions.push({
+                    id: data.sessionId,
+                    createdAt: data.createdAt || new Date().toISOString()
+                });
+                localStorage.setItem('debug_sessions', JSON.stringify(sessions));
+                
+                // Update sessions list
+                loadStoredSessions();
+                
+                // Update session ID inputs
+                document.getElementById('profile-session-id').value = data.sessionId;
+                document.getElementById('recommendations-session-id').value = data.sessionId;
+            } catch (error) {
+                handleApiError('session-result', error);
+            }
+        }
+        
+        // Function to load stored sessions
+        function loadStoredSessions() {
+            const sessionsElement = document.getElementById('sessions-list');
+            const sessions = JSON.parse(localStorage.getItem('debug_sessions') || '[]');
+            
+            if (sessions.length === 0) {
+                sessionsElement.className = 'no-sessions';
+                sessionsElement.textContent = 'No sessions stored';
+                return;
+            }
+            
+            sessionsElement.className = '';
+            
+            // Create a table of sessions
+            const table = document.createElement('table');
+            const headerRow = document.createElement('tr');
+            
+            // Add table headers
+            ['Session ID', 'Created At', 'Actions'].forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            
+            table.appendChild(headerRow);
+            
+            // Add rows for each session
+            sessions.forEach(session => {
+                const row = document.createElement('tr');
+                
+                // Session ID cell
+                const idCell = document.createElement('td');
+                idCell.textContent = session.id;
+                row.appendChild(idCell);
+                
+                // Created At cell
+                const createdCell = document.createElement('td');
+                createdCell.textContent = new Date(session.createdAt).toLocaleString();
+                row.appendChild(createdCell);
+                
+                // Actions cell
+                const actionsCell = document.createElement('td');
+                
+                // Use session button
+                const useButton = document.createElement('button');
+                useButton.textContent = 'Use';
+                useButton.style.marginRight = '5px';
+                useButton.onclick = () => {
+                    document.getElementById('profile-session-id').value = session.id;
+                    document.getElementById('recommendations-session-id').value = session.id;
+                };
+                
+                actionsCell.appendChild(useButton);
+                row.appendChild(actionsCell);
+                
+                table.appendChild(row);
+            });
+            
+            // Replace the content with the table
+            sessionsElement.innerHTML = '';
+            sessionsElement.appendChild(table);
+        }
+        
+        // Function to get a profile
+        async function getProfile() {
+            const sessionId = document.getElementById('profile-session-id').value;
+            
+            if (!sessionId) {
+                showResult('profile-result', 'Error: Please enter a session ID', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/profile?sessionId=${sessionId}`);
+                const data = await response.json();
+                showResult('profile-result', data);
+            } catch (error) {
+                handleApiError('profile-result', error);
+            }
+        }
+        
+        // Function to update a profile with mock answers
+        async function updateProfile() {
+            const sessionId = document.getElementById('profile-session-id').value;
+            
+            if (!sessionId) {
+                showResult('profile-result', 'Error: Please enter a session ID', true);
+                return;
+            }
+            
+            const mockAnswers = {
+                visual_complexity_1: 'complex',
+                narrative_complexity_1: 'complex',
+                emotional_intensity_1: 'intense',
+                character_complexity_1: 'deep_nuanced',
+                moral_ambiguity_1: 'ambiguous'
+            };
+            
+            try {
+                const response = await fetch(`/api/v1/profile?sessionId=${sessionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ answers: mockAnswers })
+                });
+                
+                const data = await response.json();
+                showResult('profile-result', data);
+            } catch (error) {
+                handleApiError('profile-result', error);
+            }
+        }
+        
+        // Function to get recommendations
+        async function getRecommendations() {
+            const sessionId = document.getElementById('recommendations-session-id').value;
+            
+            if (!sessionId) {
+                showResult('recommendations-result', 'Error: Please enter a session ID', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/recommendations?sessionId=${sessionId}`);
+                const data = await response.json();
+                showResult('recommendations-result', data);
+            } catch (error) {
+                handleApiError('recommendations-result', error);
+            }
+        }
+        
+        // Function to test the debug endpoint
+        async function testDebugEndpoint() {
+            try {
+                const response = await fetch('/api/v1/debug');
+                const data = await response.json();
+                showResult('debug-result', data);
+            } catch (error) {
+                handleApiError('debug-result', error);
+            }
+        }
+        
+        // Load sessions and environment info on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStoredSessions();
+            fetchEnvironmentInfo();
+        });
+    </script>
+</body>
+</html>
