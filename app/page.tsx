@@ -67,37 +67,6 @@ export default function Home() {
           </div>
         </motion.div>
         
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.7 }}
-          className="mt-12 bg-white p-5 rounded-lg shadow-md"
-        >
-          <h2 className="text-lg font-medium mb-3">Debug & Testing Tools</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <Link href="/test-images" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm">
-              API Images Test
-            </Link>
-            <Link href="/test-manual-images" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm">
-              Manual Images Test
-            </Link>
-            <a href="/debug-recommendations.html" target="_blank" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm font-semibold">
-              Debug Recommendations
-            </a>
-            <a href="/test-tmdb-images.html" target="_blank" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm">
-              Direct Image Test
-            </a>
-            <Link href="/api/v1/debug" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm">
-              Debug API
-            </Link>
-            <Link href="/api/v1/debug/recommendations" className="bg-blue-100 p-2 rounded hover:bg-blue-200 text-sm">
-              Debug Recommendations API
-            </Link>
-          </div>
-          <div className="mt-3 text-xs text-gray-500">
-            These tools help troubleshoot image loading and recommendation issues
-          </div>
-        </motion.div>
       </div>
     </div>
   );
